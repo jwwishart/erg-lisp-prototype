@@ -3,14 +3,17 @@
 //let expression = "(+ 1 2)";
 //let expression = "(print 1234)";
 //let expression = "(var junk 15)";
-// let expression = `
-//     (var junk 15)
-//     (print junk)
-//     (set junk 12)
-//     (print junk)
-//     (print 123)`;
 
-let expression = `(print (+ 4 5))`
+let expression = `
+    (print "Erg-List Version \\"0.0.1\\"")
+    (var junk 15)
+    (print junk)
+    (set junk 12)
+    (print junk)
+    (print 123)`;
+
+// let expression = `(print (+ 4 5))`
+//let expression = `(print "Hello World!")`
 
 //let expression = "(print (+ 4 5 6 7 8 9))";
 
@@ -49,6 +52,12 @@ class Atom {
     IsData?: Boolean = false;
 }
 
+class TokenInfo {
+    index: number;
+    line: number;
+    col: number;
+}
+
 let isObj = (o) => { return Object.prototype.toString.call(o) === "[object Object]";};
 
 function parse(expression: string) {
@@ -80,12 +89,46 @@ function parse(expression: string) {
 
         let wholeWord = '';
         // TODO check the ranges!!! esp the numbers :o)
-        while ((c = next()) !== undefined && ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))) {
+        while ((c = next()) !== undefined && 
+               ((c >= '0' && c <= '9') || 
+                (c >= 'a' && c <= 'z') || 
+                (c >= 'A' && c <= 'Z'))) 
+        {
             wholeWord += c;
         }
 
         i--;
         return wholeWord;
+    };
+
+    let parseString = () => {
+        //i--; skip the first "
+
+        let wholeWord = '';
+        // TODO check the ranges!!! esp the numbers :o)
+        let isEscaping = false;
+        while ((c = next()) !== undefined && (isEscaping || !isEscaping && c !== '"')) {
+            if (c == '\\') {
+                isEscaping = true;
+                continue;
+            } else if(isEscaping === true) {
+                isEscaping = false; // we ought to be adding our escaped char this iteration. So reset ...
+            }
+
+            wholeWord += c;
+        }
+
+        // i--; skip the final quote
+        return wholeWord;
+    };
+
+    let tokenInfo = () => {
+        let result = new TokenInfo();
+        result.index = i;
+        result.line = 1;
+        result.col = i;
+
+        return result;
     };
 
     while ((c = next()) !== undefined) {
@@ -118,8 +161,23 @@ function parse(expression: string) {
             }
         }
 
+        // String literal
+        //
+
+        if (c === '\"') {
+            it.push({
+                Type: AtomType.String,
+                Data: parseString(),
+                IsData: true
+            });
+
+            continue;
+        }
+
         // List/Code
         //
+
+        // TODO test this list literal stuff?
         if (c == "'") {
             hasDataIndicator = true;
             continue;
@@ -172,12 +230,15 @@ function parse(expression: string) {
         // Symbols
         // 
 
-        // TODO must be a-zA-Z then a-zA-Z0-9...
-        it.push({
-            Type: AtomType.Symbol,
-            Data: parseSymobol()
-        });
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')){
+            it.push({
+                Type: AtomType.Symbol,
+                Data: parseSymobol()
+            });
+            continue;
+        }
 
+        throw new Error("Unexpected Token " + c + "::: " + JSON.stringify(tokenInfo()));
         // TODO hasDataIndicator must be turned off!
     }
 

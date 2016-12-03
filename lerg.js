@@ -2,14 +2,9 @@
 //let expression = "(+ 1 2)";
 //let expression = "(print 1234)";
 //let expression = "(var junk 15)";
-// let expression = `
-//     (var junk 15)
-//     (print junk)
-//     (set junk 12)
-//     (print junk)
-//     (print 123)`;
-// TODO below errors... allocation failed: out of mem??? :oO
-var expression = "(print (+ 4 5))";
+var expression = "\n    (print \"Erg-List Version \\\"0.0.1\\\"\")\n    (var junk 15)\n    (print junk)\n    (set junk 12)\n    (print junk)\n    (print 123)";
+// let expression = `(print (+ 4 5))`
+//let expression = `(print "Hello World!")`
 //let expression = "(print (+ 4 5 6 7 8 9))";
 var DEBUG = false;
 /*
@@ -42,6 +37,11 @@ var Atom = (function () {
     }
     return Atom;
 }());
+var TokenInfo = (function () {
+    function TokenInfo() {
+    }
+    return TokenInfo;
+}());
 var isObj = function (o) { return Object.prototype.toString.call(o) === "[object Object]"; };
 function parse(expression) {
     var i = 0;
@@ -67,11 +67,39 @@ function parse(expression) {
         i--;
         var wholeWord = '';
         // TODO check the ranges!!! esp the numbers :o)
-        while ((c = next()) !== undefined && ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))) {
+        while ((c = next()) !== undefined &&
+            ((c >= '0' && c <= '9') ||
+                (c >= 'a' && c <= 'z') ||
+                (c >= 'A' && c <= 'Z'))) {
             wholeWord += c;
         }
         i--;
         return wholeWord;
+    };
+    var parseString = function () {
+        //i--; skip the first "
+        var wholeWord = '';
+        // TODO check the ranges!!! esp the numbers :o)
+        var isEscaping = false;
+        while ((c = next()) !== undefined && (isEscaping || !isEscaping && c !== '"')) {
+            if (c == '\\') {
+                isEscaping = true;
+                continue;
+            }
+            else if (isEscaping === true) {
+                isEscaping = false; // we ought to be adding our escaped char this iteration. So reset ...
+            }
+            wholeWord += c;
+        }
+        // i--; skip the final quote
+        return wholeWord;
+    };
+    var tokenInfo = function () {
+        var result = new TokenInfo();
+        result.index = i;
+        result.line = 1;
+        result.col = i;
+        return result;
     };
     while ((c = next()) !== undefined) {
         // TODO this needs to be ignored if in a string literal
@@ -100,8 +128,19 @@ function parse(expression) {
                     continue;
                 }
         }
+        // String literal
+        //
+        if (c === '\"') {
+            it.push({
+                Type: AtomType.String,
+                Data: parseString(),
+                IsData: true
+            });
+            continue;
+        }
         // List/Code
         //
+        // TODO test this list literal stuff?
         if (c == "'") {
             hasDataIndicator = true;
             continue;
@@ -145,11 +184,14 @@ function parse(expression) {
         }
         // Symbols
         // 
-        // TODO must be a-zA-Z then a-zA-Z0-9...
-        it.push({
-            Type: AtomType.Symbol,
-            Data: parseSymobol()
-        });
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+            it.push({
+                Type: AtomType.Symbol,
+                Data: parseSymobol()
+            });
+            continue;
+        }
+        throw new Error("Unexpected Token " + c + "::: " + JSON.stringify(tokenInfo()));
     }
     return it;
 }
