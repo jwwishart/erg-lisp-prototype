@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "module": "none",
+        "noImplicitAny": false,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "outFile": "./lerg.js",
+        "sourceMap": true
+    },
+    "include": [
+        "lerg.ts",
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}

@@ -1,214 +1,33 @@
-//let expression = "1"; // Atom: Int, Evaluate: return the value!
-//let expression = "(+ 1 2)";
-//let expression = "(print 1234)";
-//let expression = "(var junk 15)";
-var expression = "\n    (print \"Erg-List Version \\\"0.0.1\\\"\")\n    (var junk 15)\n    (print junk)\n    (set junk 12)\n    (print junk)\n    (print 123)";
-// let expression = `(print (+ 4 5))`
-//let expression = `(print "Hello World!")`
-//let expression = "(print (+ 4 5 6 7 8 9))";
+var expression = "\n    (var a 235)\n    (print (+ 4 a))";
 var DEBUG = false;
-/*
-    Notes
-    - Parsing essentially needs to generate a list of lists of lists ad infinitum
-      and those lists are then "evaluatable"
-      This would be the same with evaluated stuff like func (of def for definition
-      of a function... anything that is contained in the rest of the list
-      will have been parsed but will need to be evaluated AT THE TIME
-      of execution... So should all top level code in the file..
-    
-    TODO
-        - var/let/set style setting of a value...
-
- */
-var AtomType;
-(function (AtomType) {
-    AtomType[AtomType["None"] = 0] = "None";
-    AtomType[AtomType["Symbol"] = 1] = "Symbol";
-    AtomType[AtomType["Integer"] = 2] = "Integer";
-    AtomType[AtomType["Decimal"] = 3] = "Decimal";
-    AtomType[AtomType["Boolean"] = 4] = "Boolean";
-    AtomType[AtomType["String"] = 5] = "String";
-    AtomType[AtomType["List"] = 6] = "List";
-    AtomType[AtomType["Code"] = 7] = "Code";
-})(AtomType || (AtomType = {}));
-var Atom = (function () {
-    function Atom() {
-        this.IsData = false;
-    }
-    return Atom;
-}());
-var TokenInfo = (function () {
-    function TokenInfo() {
-    }
-    return TokenInfo;
-}());
-var isObj = function (o) { return Object.prototype.toString.call(o) === "[object Object]"; };
-function parse(expression) {
-    var i = 0;
-    var next = function () { return expression[i++]; };
-    var it = []; //{ Type: AtomType.None, Data: null};
-    var top = it;
-    var parentStack = [it];
-    var c = null;
-    var hasDataIndicator = false;
-    var parseInteger = function () {
-        i--; // Keeps while loop consistent...
-        var wholeNumber = '';
-        while ((c = next()) !== undefined) {
-            var asN = parseInt(c, 10);
-            if (isNaN(asN))
-                break;
-            wholeNumber += c;
-        }
-        i--; // Move back a char so next sections next() call will be on current char
-        return wholeNumber;
-    };
-    var parseSymobol = function () {
-        i--;
-        var wholeWord = '';
-        // TODO check the ranges!!! esp the numbers :o)
-        while ((c = next()) !== undefined &&
-            ((c >= '0' && c <= '9') ||
-                (c >= 'a' && c <= 'z') ||
-                (c >= 'A' && c <= 'Z'))) {
-            wholeWord += c;
-        }
-        i--;
-        return wholeWord;
-    };
-    var parseString = function () {
-        //i--; skip the first "
-        var wholeWord = '';
-        // TODO check the ranges!!! esp the numbers :o)
-        var isEscaping = false;
-        while ((c = next()) !== undefined && (isEscaping || !isEscaping && c !== '"')) {
-            if (c == '\\') {
-                isEscaping = true;
-                continue;
-            }
-            else if (isEscaping === true) {
-                isEscaping = false; // we ought to be adding our escaped char this iteration. So reset ...
-            }
-            wholeWord += c;
-        }
-        // i--; skip the final quote
-        return wholeWord;
-    };
-    var tokenInfo = function () {
-        var result = new TokenInfo();
-        result.index = i;
-        result.line = 1;
-        result.col = i;
-        return result;
-    };
-    while ((c = next()) !== undefined) {
-        // TODO this needs to be ignored if in a string literal
-        if (c === ' ' || c === '\t' || c === '\n')
-            continue;
-        switch (c) {
-            // Integer
-            // TODO decimal/float... 
-            //
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                {
-                    it.push({
-                        Type: AtomType.Integer,
-                        Data: parseInteger(),
-                        IsData: true
-                    });
-                    continue;
-                }
-        }
-        // String literal
-        //
-        if (c === '\"') {
-            it.push({
-                Type: AtomType.String,
-                Data: parseString(),
-                IsData: true
-            });
-            continue;
-        }
-        // List/Code
-        //
-        // TODO test this list literal stuff?
-        if (c == "'") {
-            hasDataIndicator = true;
-            continue;
-        }
-        if (c === '(') {
-            it.push({
-                Type: hasDataIndicator ? AtomType.List : AtomType.Code,
-                Data: []
-            });
-            if (hasDataIndicator)
-                it[it.length - 1].IsData = true;
-            parentStack.push(it);
-            it = it[it.length - 1].Data;
-            hasDataIndicator = false;
-            continue;
-        }
-        if (c === ')') {
-            it = parentStack.pop();
-            continue;
-        }
-        // Special Symbols
-        // 
-        switch (c) {
-            // TODO need to validate that the parent has no entries? otherwise
-            //  it is really invalid structure isn't it? unless the 
-            //  special char is a function, being passed to another function?
-            case '+':
-            case '-':
-            case '/':
-            case '*':
-                {
-                    // TODO need to find the symbol... what is it? a 
-                    //  function? if so then it needs to have the subsequent
-                    //  items parsed to it...
-                    it.push({
-                        Type: AtomType.Symbol,
-                        Data: c
-                    });
-                    continue;
-                }
-        }
-        // Symbols
-        // 
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-            it.push({
-                Type: AtomType.Symbol,
-                Data: parseSymobol()
-            });
-            continue;
-        }
-        throw new Error("Unexpected Token " + c + "::: " + JSON.stringify(tokenInfo()));
-    }
-    return it;
-}
-// TODO functions either should take 1 argument or two? how 
-//  do we tell the calling code of the below list that the
-//  functions below can take 1 or two arguments? just because
-//  the user gives 3 arguments to print? what should happen?
-/*
-    This stuff must either be JavaScript functions or atoms containing
-    code or data.... so we can distinguish between atoms and functions
-    and anything else is likely data???
- */
+var SymbolType;
+(function (SymbolType) {
+    SymbolType[SymbolType["Function"] = 0] = "Function";
+    SymbolType[SymbolType["Data"] = 1] = "Data";
+})(SymbolType || (SymbolType = {}));
 var globalScopeSymbols = {
-    // Native Code for Execution
-    //
+    '-': {
+        Type: SymbolType.Function,
+        Arguments: [{
+                Name: 'a',
+                Type: AtomType.Integer
+            }, {
+                Name: 'b',
+                Type: AtomType.Integer
+            },],
+        ReturnType: AtomType.Integer,
+        Data: function (a, b) { return a + b; }
+    },
+    'printf': {
+        Type: SymbolType.Function,
+        Arguments: [{
+                Name: 'a',
+                Type: AtomType.String
+            }],
+        ReturnType: AtomType.Integer,
+        Data: function (a) { console.log(a); }
+    },
     '+': function (a, b) { return a + b; },
-    '-': function (a, b) { return a - b; },
     '/': function (a, b) { return a / b; },
     '*': function (a, b) { return a * b; },
     'print': function (text) {
@@ -221,20 +40,14 @@ var globalScopeSymbols = {
                 return;
             }
         }
-        // TODO handle error situations from above
-        // TOOD handle other types passed in...?
-        // Else consider the text to be ... well text!
         console.log(text);
     },
     'var': function (name, value) {
-        // If we were passed a symbol Atom for name then we need to
-        // just get the symbol name, we have the value as 2nd arg
         if (Object.prototype.hasOwnProperty.call(name, 'Type') &&
             Object.prototype.hasOwnProperty.call(name, 'Data') &&
             name.Type === AtomType.Symbol) {
             name = name.Data;
         }
-        // TODO what if value is an Atom? should throw?
         scope()[name] = value;
     },
     'set': function (name, value) { globalScopeSymbols.var(name, value); }
@@ -257,13 +70,10 @@ var dumpScope = function () {
 function evaluate(parsed) {
     DEBUG && console.log(JSON.stringify(parsed));
     function internalEvaluate(parsed) {
-        // Symbol ???
         if (parsed.Type === AtomType.Symbol) {
             var val = findInScope(parsed.Data);
             if (val == null) {
-                // TODO this is wrong for evaluation.... 
-                // TODO parsing should consider this...
-                return parsed.Data; // Can't find the symbol so just return the symbol
+                return parsed.Data;
             }
             return val;
         }
@@ -271,72 +81,183 @@ function evaluate(parsed) {
             if (parsed.Type == AtomType.Integer) {
                 return parseInt(parsed.Data, 10);
             }
-            // TODO other types of data need to be cast propertly
             return parsed.Data;
         }
         if (parsed.Type == AtomType.Code) {
             var args = [];
-            // parsed.Data.length - 1;
-            // TODO we ought to validate that the first thing is a symbol?
-            // NOTE we don't parse the first symbol
             for (var i_1 = 1; i_1 < parsed.Data.length; i_1++) {
-                // Have to let the function evaluate the symbol if it
-                // needs to... the function might need to create the 
-                // symbol in scope (var,set) or evaluate it (print)
                 if (parsed.Data[i_1].Type == AtomType.Symbol) {
                     args.push(parsed.Data[i_1]);
                     continue;
                 }
                 args.push(internalEvaluate(parsed.Data[i_1]));
             }
-            //console.log("Symbol: " + JSON.stringify(parsed.Data[0]));
-            var method = globalScopeSymbols[parsed.Data[0].Data]; // symbol! .. .?
+            var method = globalScopeSymbols[parsed.Data[0].Data];
             return method.apply(globalScopeSymbols, args);
         }
     }
     for (var i = 0; i < parsed.length; i++) {
-        // Raw Integer
         var val = internalEvaluate(parsed[i]);
         if (val === undefined)
             continue;
         console.log(val);
     }
-    //console.log("TODO write evaluate()");
     return parsed;
 }
-// function print(results) {
-//     if (results === null) {
-//         console.log("null");
-//         return;
-//     }
-//     if (results === undefined) {
-//         console.log("undefined");
-//         return;
-//     }
-//     if (results.length) {
-//         console.log('[');
-//         for (var i = 0; i < results.length; i++) {
-//             print(results[i]);
-//             console.log(',');
-//         }
-//         console.log(']');
-//         return;
-//     }
-//     if (isObj(results)) {
-//         console.log('{');
-//         for (var p in results) {
-//             if (Object.prototype.hasOwnProperty.call(results, p)) {
-//                 console.log('"' + p + '": ');
-//                 print(results[p]);
-//                 console.log(',');
-//             }
-//         }
-//         console.log('}');   
-//         return;
-//     }
-// }
-//print(
 evaluate(parse(expression));
-//  );
 DEBUG && dumpScope();
+var AtomType;
+(function (AtomType) {
+    AtomType[AtomType["None"] = 0] = "None";
+    AtomType[AtomType["Symbol"] = 1] = "Symbol";
+    AtomType[AtomType["Integer"] = 2] = "Integer";
+    AtomType[AtomType["Decimal"] = 3] = "Decimal";
+    AtomType[AtomType["Boolean"] = 4] = "Boolean";
+    AtomType[AtomType["String"] = 5] = "String";
+    AtomType[AtomType["List"] = 6] = "List";
+    AtomType[AtomType["Code"] = 7] = "Code";
+})(AtomType || (AtomType = {}));
+var Atom = (function () {
+    function Atom() {
+        this.IsData = false;
+    }
+    return Atom;
+}());
+var TokenInfo = (function () {
+    function TokenInfo() {
+    }
+    return TokenInfo;
+}());
+function parse(expression) {
+    var i = 0;
+    var next = function () { return expression[i++]; };
+    var it = [];
+    var top = it;
+    var parentStack = [it];
+    var c = null;
+    var hasDataIndicator = false;
+    var parseInteger = function () {
+        i--;
+        var wholeNumber = '';
+        while ((c = next()) !== undefined) {
+            var asN = parseInt(c, 10);
+            if (isNaN(asN))
+                break;
+            wholeNumber += c;
+        }
+        i--;
+        return wholeNumber;
+    };
+    var parseSymobol = function () {
+        i--;
+        var wholeWord = '';
+        while ((c = next()) !== undefined &&
+            ((c >= '0' && c <= '9') ||
+                (c >= 'a' && c <= 'z') ||
+                (c >= 'A' && c <= 'Z'))) {
+            wholeWord += c;
+        }
+        i--;
+        return wholeWord;
+    };
+    var parseString = function () {
+        var wholeWord = '';
+        var isEscaping = false;
+        while ((c = next()) !== undefined && (isEscaping || !isEscaping && c !== '"')) {
+            if (c == '\\') {
+                isEscaping = true;
+                continue;
+            }
+            else if (isEscaping === true) {
+                isEscaping = false;
+            }
+            wholeWord += c;
+        }
+        return wholeWord;
+    };
+    var tokenInfo = function () {
+        var result = new TokenInfo();
+        result.index = i;
+        result.line = 1;
+        result.col = i;
+        return result;
+    };
+    while ((c = next()) !== undefined) {
+        if (c === ' ' || c === '\t' || c === '\n')
+            continue;
+        switch (c) {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                {
+                    it.push({
+                        Type: AtomType.Integer,
+                        Data: parseInteger(),
+                        IsData: true
+                    });
+                    continue;
+                }
+        }
+        if (c === '\"') {
+            it.push({
+                Type: AtomType.String,
+                Data: parseString(),
+                IsData: true
+            });
+            continue;
+        }
+        if (c == "'") {
+            hasDataIndicator = true;
+            continue;
+        }
+        if (c === '(') {
+            it.push({
+                Type: hasDataIndicator ? AtomType.List : AtomType.Code,
+                Data: []
+            });
+            if (hasDataIndicator)
+                it[it.length - 1].IsData = true;
+            parentStack.push(it);
+            it = it[it.length - 1].Data;
+            hasDataIndicator = false;
+            continue;
+        }
+        if (c === ')') {
+            it = parentStack.pop();
+            continue;
+        }
+        switch (c) {
+            case '+':
+            case '-':
+            case '/':
+            case '*':
+                {
+                    it.push({
+                        Type: AtomType.Symbol,
+                        Data: c
+                    });
+                    continue;
+                }
+        }
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+            it.push({
+                Type: AtomType.Symbol,
+                Data: parseSymobol()
+            });
+            continue;
+        }
+        throw new Error("Unexpected Token " + c + "::: " + JSON.stringify(tokenInfo()));
+    }
+    return it;
+}
+function isObject(thing) {
+    return Object.prototype.toString.call(thing) === "[object Object]";
+}
 //# sourceMappingURL=lerg.js.map

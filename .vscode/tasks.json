@@ -4,7 +4,8 @@
     "version": "0.1.0",
     "command": "tsc",
     "isShellCommand": true,
-    "args": ["--sourceMap", "lerg.ts"],
+    //"args": ["--sourceMap", "lerg.ts"],
+    "args": [],
     "showOutput": "silent",
     "problemMatcher": "$tsc"
 }
