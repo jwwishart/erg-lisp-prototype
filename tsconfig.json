@@ -4,12 +4,11 @@
         "noImplicitAny": false,
         "removeComments": true,
         "preserveConstEnums": true,
-        "outFile": "./lerg.js",
+        "outFile": "./erg.js",
         "sourceMap": true
     },
     "include": [
-        "lerg.ts",
-        "src/**/*"
+        "erg.ts"
     ],
     "exclude": [
         "node_modules",

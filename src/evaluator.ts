@@ -1,35 +1,4 @@
 
-
-//let expression = "1"; // Atom: Int, Evaluate: return the value!
-//let expression = "(+ 1 2)";
-//let expression = "(print 1234)";
-//let expression = "(var junk 15)";
-
-// let expression = `
-//     (print "Erg-List Version \\"0.0.1\\"")
-//     (var junk 15)
-//     (print junk)
-//     (set junk 12)
-//     (print junk)
-//     (print 123)`;
-
-//let expression = `(print (+ 4 5))`
-
-let expression = `
-    (var a 235)
-    (print (+ 4 a))`; // UPTO need to get a's value AS it's type!!!
-
-//let expression = `(print "Hello World!")`
-//let expression = "(print (+ 4 5 6 7 8 9))";
-
-
-// TODO define code atoms (functions) that take arguments
-// TODO define 'add' as (+ a b)
-// TODO comments...
-
-let DEBUG = false;
-
-
 // TODO functions either should take 1 argument or two? how 
 //  do we tell the calling code of the below list that the
 //  functions below can take 1 or two arguments? just because
@@ -119,6 +88,23 @@ let globalScopeSymbols = {
         // TOOD handle other types passed in...?
         // Else consider the text to be ... well text!
         console.log(text) 
+    },
+    'println' :(it) => {
+        if (it instanceof String) {
+            console.log(it);
+            return;
+        }
+        if (it instanceof Number) {
+            console.log(it);
+            return;
+        }
+
+        // TODO(jwwishart) We need to handle symbols specially... we need to handle
+        //  lists specially... we need to handle code specially... ? what else.. otherwise
+        //  it can just print it as raw thingy... (quoted lists? quoted anything? how
+        //  is quoted identified?)
+        console.error("NOOOO! What is this!: ");
+        console.error(it);
     },
     'var': function(name: any, value) {
         // If we were passed a symbol Atom for name then we need to
@@ -248,9 +234,3 @@ function evaluate(parsed: Atom[]) {
 //         return;
 //     }
 // }
-
-//print(
-    evaluate(parse(expression))
-  //  );
-
-  DEBUG && dumpScope();

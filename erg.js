@@ -1,111 +1,7 @@
-var expression = "\n    (var a 235)\n    (print (+ 4 a))";
 var DEBUG = false;
-var SymbolType;
-(function (SymbolType) {
-    SymbolType[SymbolType["Function"] = 0] = "Function";
-    SymbolType[SymbolType["Data"] = 1] = "Data";
-})(SymbolType || (SymbolType = {}));
-var globalScopeSymbols = {
-    '-': {
-        Type: SymbolType.Function,
-        Arguments: [{
-                Name: 'a',
-                Type: AtomType.Integer
-            }, {
-                Name: 'b',
-                Type: AtomType.Integer
-            },],
-        ReturnType: AtomType.Integer,
-        Data: function (a, b) { return a + b; }
-    },
-    'printf': {
-        Type: SymbolType.Function,
-        Arguments: [{
-                Name: 'a',
-                Type: AtomType.String
-            }],
-        ReturnType: AtomType.Integer,
-        Data: function (a) { console.log(a); }
-    },
-    '+': function (a, b) { return a + b; },
-    '/': function (a, b) { return a / b; },
-    '*': function (a, b) { return a * b; },
-    'print': function (text) {
-        if (Object.prototype.hasOwnProperty.call(text, 'Type') &&
-            Object.prototype.hasOwnProperty.call(text, 'Data') &&
-            text.Type === AtomType.Symbol) {
-            var val = findInScope(text.Data);
-            if (val != null) {
-                console.log(val);
-                return;
-            }
-        }
-        console.log(text);
-    },
-    'var': function (name, value) {
-        if (Object.prototype.hasOwnProperty.call(name, 'Type') &&
-            Object.prototype.hasOwnProperty.call(name, 'Data') &&
-            name.Type === AtomType.Symbol) {
-            name = name.Data;
-        }
-        scope()[name] = value;
-    },
-    'set': function (name, value) { globalScopeSymbols.var(name, value); }
-};
-var _scopes = [
-    globalScopeSymbols
-];
-var scope = function () { return _scopes[_scopes.length - 1]; };
-var findInScope = function (symbol) {
-    for (var i = _scopes.length - 1; i >= 0; i--) {
-        var val = _scopes[i][symbol];
-        if (val != null)
-            return val;
-    }
-    return null;
-};
-var dumpScope = function () {
-    console.log(_scopes);
-};
-function evaluate(parsed) {
-    DEBUG && console.log(JSON.stringify(parsed));
-    function internalEvaluate(parsed) {
-        if (parsed.Type === AtomType.Symbol) {
-            var val = findInScope(parsed.Data);
-            if (val == null) {
-                return parsed.Data;
-            }
-            return val;
-        }
-        if (parsed.IsData) {
-            if (parsed.Type == AtomType.Integer) {
-                return parseInt(parsed.Data, 10);
-            }
-            return parsed.Data;
-        }
-        if (parsed.Type == AtomType.Code) {
-            var args = [];
-            for (var i_1 = 1; i_1 < parsed.Data.length; i_1++) {
-                if (parsed.Data[i_1].Type == AtomType.Symbol) {
-                    args.push(parsed.Data[i_1]);
-                    continue;
-                }
-                args.push(internalEvaluate(parsed.Data[i_1]));
-            }
-            var method = globalScopeSymbols[parsed.Data[0].Data];
-            return method.apply(globalScopeSymbols, args);
-        }
-    }
-    for (var i = 0; i < parsed.length; i++) {
-        var val = internalEvaluate(parsed[i]);
-        if (val === undefined)
-            continue;
-        console.log(val);
-    }
-    return parsed;
+function isObject(thing) {
+    return Object.prototype.toString.call(thing) === "[object Object]";
 }
-evaluate(parse(expression));
-DEBUG && dumpScope();
 var AtomType;
 (function (AtomType) {
     AtomType[AtomType["None"] = 0] = "None";
@@ -257,7 +153,124 @@ function parse(expression) {
     }
     return it;
 }
-function isObject(thing) {
-    return Object.prototype.toString.call(thing) === "[object Object]";
+var SymbolType;
+(function (SymbolType) {
+    SymbolType[SymbolType["Function"] = 0] = "Function";
+    SymbolType[SymbolType["Data"] = 1] = "Data";
+})(SymbolType || (SymbolType = {}));
+var globalScopeSymbols = {
+    '-': {
+        Type: SymbolType.Function,
+        Arguments: [{
+                Name: 'a',
+                Type: AtomType.Integer
+            }, {
+                Name: 'b',
+                Type: AtomType.Integer
+            },],
+        ReturnType: AtomType.Integer,
+        Data: function (a, b) { return a + b; }
+    },
+    'printf': {
+        Type: SymbolType.Function,
+        Arguments: [{
+                Name: 'a',
+                Type: AtomType.String
+            }],
+        ReturnType: AtomType.Integer,
+        Data: function (a) { console.log(a); }
+    },
+    '+': function (a, b) { return a + b; },
+    '/': function (a, b) { return a / b; },
+    '*': function (a, b) { return a * b; },
+    'print': function (text) {
+        if (Object.prototype.hasOwnProperty.call(text, 'Type') &&
+            Object.prototype.hasOwnProperty.call(text, 'Data') &&
+            text.Type === AtomType.Symbol) {
+            var val = findInScope(text.Data);
+            if (val != null) {
+                console.log(val);
+                return;
+            }
+        }
+        console.log(text);
+    },
+    'println': function (it) {
+        if (it instanceof String) {
+            console.log(it);
+            return;
+        }
+        if (it instanceof Number) {
+            console.log(it);
+            return;
+        }
+        console.error("NOOOO! What is this!: ");
+        console.error(it);
+    },
+    'var': function (name, value) {
+        if (Object.prototype.hasOwnProperty.call(name, 'Type') &&
+            Object.prototype.hasOwnProperty.call(name, 'Data') &&
+            name.Type === AtomType.Symbol) {
+            name = name.Data;
+        }
+        scope()[name] = value;
+    },
+    'set': function (name, value) { globalScopeSymbols.var(name, value); }
+};
+var _scopes = [
+    globalScopeSymbols
+];
+var scope = function () { return _scopes[_scopes.length - 1]; };
+var findInScope = function (symbol) {
+    for (var i = _scopes.length - 1; i >= 0; i--) {
+        var val = _scopes[i][symbol];
+        if (val != null)
+            return val;
+    }
+    return null;
+};
+var dumpScope = function () {
+    console.log(_scopes);
+};
+function evaluate(parsed) {
+    DEBUG && console.log(JSON.stringify(parsed));
+    function internalEvaluate(parsed) {
+        if (parsed.Type === AtomType.Symbol) {
+            var val = findInScope(parsed.Data);
+            if (val == null) {
+                return parsed.Data;
+            }
+            return val;
+        }
+        if (parsed.IsData) {
+            if (parsed.Type == AtomType.Integer) {
+                return parseInt(parsed.Data, 10);
+            }
+            return parsed.Data;
+        }
+        if (parsed.Type == AtomType.Code) {
+            var args = [];
+            for (var i_1 = 1; i_1 < parsed.Data.length; i_1++) {
+                if (parsed.Data[i_1].Type == AtomType.Symbol) {
+                    args.push(parsed.Data[i_1]);
+                    continue;
+                }
+                args.push(internalEvaluate(parsed.Data[i_1]));
+            }
+            var method = globalScopeSymbols[parsed.Data[0].Data];
+            return method.apply(globalScopeSymbols, args);
+        }
+    }
+    for (var i = 0; i < parsed.length; i++) {
+        var val = internalEvaluate(parsed[i]);
+        if (val === undefined)
+            continue;
+        console.log(val);
+    }
+    return parsed;
 }
-//# sourceMappingURL=lerg.js.map
+var expression = "(println 5)";
+DEBUG = true;
+evaluate(parse(expression));
+DEBUG && dumpScope();
+//# sourceMappingURL=erg.js.map
