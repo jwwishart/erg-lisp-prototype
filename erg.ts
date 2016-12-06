@@ -36,9 +36,14 @@ let expression = `(println 5)`;
 
 DEBUG = true;
 
+console.log(parse(`1`));
+console.log(parse(`()`));
+console.log(parse(`(+ 1 2)`));
+console.log(parse(`(print "Hello World")`));
+console.log(parse(`(print (+ 1 2))`));
 
 //print(
-    evaluate(parse(expression))
+//    evaluate(parse(expression))
   //  );
 
   DEBUG && dumpScope();

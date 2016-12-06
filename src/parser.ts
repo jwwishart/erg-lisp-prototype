@@ -1,22 +1,13 @@
 
-/*
-    Notes
-    - Parsing essentially needs to generate a list of lists of lists ad infinitum
-      and those lists are then "evaluatable"
-      This would be the same with evaluated stuff like func (of def for definition
-      of a function... anything that is contained in the rest of the list 
-      will have been parsed but will need to be evaluated AT THE TIME
-      of execution... So should all top level code in the file..
-    
-    TODO
-        - var/let/set style setting of a value...
 
- */
+// Types
+//
+
 enum AtomType {
     None,
 
     Symbol,
-    
+
     Integer,
     Decimal,
     Boolean,
@@ -39,21 +30,62 @@ class TokenInfo {
 }
 
 
-function parse(expression: string) {
-    let i = 0;
-    let next = () => { return expression[i++]; };
-    let it : Atom[] = []; //{ Type: AtomType.None, Data: null};
-    let top = it;
-    let parentStack = [it];
+// Code
+//
 
+/*
+    Parse the string that is given into the relevant type ready for evaluation
+    1 = should generate 1 as a literal value (evalutes to itself
+    (+ 1 2) = should generate a simple list with  + as a symbol, 1 and 2 as literals
+        the parser
+ */
+function parse(code: string) {
+    let i = 0;
+    let results = []; // Array of expressions
+    let next = () => { return code[i++]; };
     let c = null;
-    let hasDataIndicator = false;
+    let expression = null; // current list expression we are parsing goes in here till done?
+
+    let push = (it) => {
+        // UPTO(jwwishart)
+        // UPTO(jwwishart)
+        // UPTO(jwwishart)
+        // UPTO(jwwishart)
+        // UPTO(jwwishart)
+        // UPTO(jwwishart) need to do nested lists ... :o) so expression must contain
+        //  the current list maybe, and a stack of parents need to be available for handling
+        //  in ALL cases where we start a list I suppose???
+        // UPTO(jwwishart)
+        // UPTO(jwwishart)
+        // UPTO(jwwishart)
+        // UPTO(jwwishart)
+        
+        // If we pushed a list then append to the list
+        if (Object.prototype.toString.call(expression) === '[object Array]') {
+            expression.push(it);
+            return;
+        }
+
+        // if anything else it is an expression so just push it as it is... 
+        if (expression == null) {
+            results.push(it) 
+            expression = it;
+            return;
+        } else {
+            results.push(it);
+        }
+    }
+
+    let completeList = () => {
+        //results.push(expression);
+        expression = null;
+    }
 
     let parseInteger = () => {
         i--; // Keeps while loop consistent...
 
         let wholeNumber = '';
-        while ((c = next()) !== undefined) {        
+        while ((c = next()) !== undefined) {
             let asN = parseInt(c, 10);
             if (isNaN(asN)) break;
             wholeNumber += c;
@@ -62,23 +94,6 @@ function parse(expression: string) {
         i--; // Move back a char so next sections next() call will be on current char
         return wholeNumber;
     }
-
-    let parseSymobol = () => {
-        i--;
-
-        let wholeWord = '';
-        // TODO check the ranges!!! esp the numbers :o)
-        while ((c = next()) !== undefined && 
-               ((c >= '0' && c <= '9') || 
-                (c >= 'a' && c <= 'z') || 
-                (c >= 'A' && c <= 'Z'))) 
-        {
-            wholeWord += c;
-        }
-
-        i--;
-        return wholeWord;
-    };
 
     let parseString = () => {
         //i--; skip the first "
@@ -90,7 +105,7 @@ function parse(expression: string) {
             if (c == '\\') {
                 isEscaping = true;
                 continue;
-            } else if(isEscaping === true) {
+            } else if (isEscaping === true) {
                 isEscaping = false; // we ought to be adding our escaped char this iteration. So reset ...
             }
 
@@ -99,26 +114,31 @@ function parse(expression: string) {
 
         // i--; skip the final quote
         return wholeWord;
-    };
+    }
 
-    let tokenInfo = () => {
-        let result = new TokenInfo();
-        result.index = i;
-        result.line = 1;
-        result.col = i;
+    let parseSymobol = () => {
+        i--;
 
-        return result;
+        let wholeWord = '';
+        // TODO check the ranges!!! esp the numbers :o)
+        while ((c = next()) !== undefined &&
+            ((c >= '0' && c <= '9') ||
+                (c >= 'a' && c <= 'z') ||
+                (c >= 'A' && c <= 'Z'))) {
+            wholeWord += c;
+        }
+
+        i--;
+        return wholeWord;
     };
 
     while ((c = next()) !== undefined) {
-// TODO this needs to be ignored if in a string literal
-        if (c === ' ' || c === '\t' || c === '\n') continue;
+        // TODO(jwwishart) ignore these characters if in a string literal?
+        if (c === ' ' || c === '\t' || c === '\n' || c === '\r') continue;
 
         switch (c) {
             // Integer
-            // TODO decimal/float... 
             //
-
             case '0':
             case '1':
             case '2':
@@ -127,14 +147,11 @@ function parse(expression: string) {
             case '5':
             case '6':
             case '7':
-            case '8': 
+            case '8':
             case '9':
             {
-                it.push({
-                    Type: AtomType.Integer,
-                    Data: parseInteger(),
-                    IsData: true
-                });
+                // TODO(jwwishart) decimal, bignumber, ratio
+                push(parseInteger());
 
                 continue;
             }
@@ -144,11 +161,8 @@ function parse(expression: string) {
         //
 
         if (c === '\"') {
-            it.push({
-                Type: AtomType.String,
-                Data: parseString(),
-                IsData: true
-            });
+            // TODO(jwwishart) escape characters
+            push(parseString());
 
             continue;
         }
@@ -156,29 +170,20 @@ function parse(expression: string) {
         // List/Code
         //
 
-        // TODO test this list literal stuff?
-        if (c == "'") {
-            hasDataIndicator = true;
-            continue;
-        }
+        // TODO(jwwishart) Quote...  convert to quoted expression without need for
+        //  this stuff...
+        // if (c == "'") {
+        //     hasDataIndicator = true;
+        //     continue;
+        // }
 
         if (c === '(') {
-            it.push({
-                Type: hasDataIndicator ? AtomType.List : AtomType.Code,
-                Data: [],
-            });
-
-            if (hasDataIndicator) it[it.length -1].IsData = true;
-
-            parentStack.push(it);
-            it = it[it.length - 1].Data;
-
-            hasDataIndicator = false;
+            push([]);
             continue;
         }
 
         if (c === ')') {
-            it = parentStack.pop();
+            completeList();
             continue;
         }
 
@@ -192,34 +197,38 @@ function parse(expression: string) {
             case '+':
             case '-':
             case '/':
-            case '*': 
-            {
-                // TODO need to find the symbol... what is it? a 
-                //  function? if so then it needs to have the subsequent
-                //  items parsed to it...
-                it.push({
-                    Type: AtomType.Symbol,
-                    Data: c
-                });
+            case '*':
+                {
+                    // TODO need to find the symbol... what is it? a 
+                    //  function? if so then it needs to have the subsequent
+                    //  items parsed to it...
+                    push(c);
 
-                continue;
-            }
+                    continue;
+                }
         }
 
         // Symbols
         // 
 
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')){
-            it.push({
-                Type: AtomType.Symbol,
-                Data: parseSymobol()
-            });
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+            push(parseSymobol());
+
             continue;
         }
+
+        let tokenInfo = () => {
+            let result = new TokenInfo();
+            result.index = i;
+            result.line = 1;
+            result.col = i;
+
+            return result;
+        };
 
         throw new Error("Unexpected Token " + c + "::: " + JSON.stringify(tokenInfo()));
         // TODO hasDataIndicator must be turned off!
     }
 
-    return it;
+    return results;
 }

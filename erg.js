@@ -24,14 +24,29 @@ var TokenInfo = (function () {
     }
     return TokenInfo;
 }());
-function parse(expression) {
+function parse(code) {
     var i = 0;
-    var next = function () { return expression[i++]; };
-    var it = [];
-    var top = it;
-    var parentStack = [it];
+    var results = [];
+    var next = function () { return code[i++]; };
     var c = null;
-    var hasDataIndicator = false;
+    var expression = null;
+    var push = function (it) {
+        if (Object.prototype.toString.call(expression) === '[object Array]') {
+            expression.push(it);
+            return;
+        }
+        if (expression == null) {
+            results.push(it);
+            expression = it;
+            return;
+        }
+        else {
+            results.push(it);
+        }
+    };
+    var completeList = function () {
+        expression = null;
+    };
     var parseInteger = function () {
         i--;
         var wholeNumber = '';
@@ -43,18 +58,6 @@ function parse(expression) {
         }
         i--;
         return wholeNumber;
-    };
-    var parseSymobol = function () {
-        i--;
-        var wholeWord = '';
-        while ((c = next()) !== undefined &&
-            ((c >= '0' && c <= '9') ||
-                (c >= 'a' && c <= 'z') ||
-                (c >= 'A' && c <= 'Z'))) {
-            wholeWord += c;
-        }
-        i--;
-        return wholeWord;
     };
     var parseString = function () {
         var wholeWord = '';
@@ -71,15 +74,20 @@ function parse(expression) {
         }
         return wholeWord;
     };
-    var tokenInfo = function () {
-        var result = new TokenInfo();
-        result.index = i;
-        result.line = 1;
-        result.col = i;
-        return result;
+    var parseSymobol = function () {
+        i--;
+        var wholeWord = '';
+        while ((c = next()) !== undefined &&
+            ((c >= '0' && c <= '9') ||
+                (c >= 'a' && c <= 'z') ||
+                (c >= 'A' && c <= 'Z'))) {
+            wholeWord += c;
+        }
+        i--;
+        return wholeWord;
     };
     while ((c = next()) !== undefined) {
-        if (c === ' ' || c === '\t' || c === '\n')
+        if (c === ' ' || c === '\t' || c === '\n' || c === '\r')
             continue;
         switch (c) {
             case '0':
@@ -93,40 +101,20 @@ function parse(expression) {
             case '8':
             case '9':
                 {
-                    it.push({
-                        Type: AtomType.Integer,
-                        Data: parseInteger(),
-                        IsData: true
-                    });
+                    push(parseInteger());
                     continue;
                 }
         }
         if (c === '\"') {
-            it.push({
-                Type: AtomType.String,
-                Data: parseString(),
-                IsData: true
-            });
-            continue;
-        }
-        if (c == "'") {
-            hasDataIndicator = true;
+            push(parseString());
             continue;
         }
         if (c === '(') {
-            it.push({
-                Type: hasDataIndicator ? AtomType.List : AtomType.Code,
-                Data: []
-            });
-            if (hasDataIndicator)
-                it[it.length - 1].IsData = true;
-            parentStack.push(it);
-            it = it[it.length - 1].Data;
-            hasDataIndicator = false;
+            push([]);
             continue;
         }
         if (c === ')') {
-            it = parentStack.pop();
+            completeList();
             continue;
         }
         switch (c) {
@@ -135,23 +123,24 @@ function parse(expression) {
             case '/':
             case '*':
                 {
-                    it.push({
-                        Type: AtomType.Symbol,
-                        Data: c
-                    });
+                    push(c);
                     continue;
                 }
         }
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-            it.push({
-                Type: AtomType.Symbol,
-                Data: parseSymobol()
-            });
+            push(parseSymobol());
             continue;
         }
+        var tokenInfo = function () {
+            var result = new TokenInfo();
+            result.index = i;
+            result.line = 1;
+            result.col = i;
+            return result;
+        };
         throw new Error("Unexpected Token " + c + "::: " + JSON.stringify(tokenInfo()));
     }
-    return it;
+    return results;
 }
 var SymbolType;
 (function (SymbolType) {
@@ -271,6 +260,10 @@ function evaluate(parsed) {
 }
 var expression = "(println 5)";
 DEBUG = true;
-evaluate(parse(expression));
+console.log(parse("1"));
+console.log(parse("()"));
+console.log(parse("(+ 1 2)"));
+console.log(parse("(print \"Hello World\")"));
+console.log(parse("(print (+ 1 2))"));
 DEBUG && dumpScope();
 //# sourceMappingURL=erg.js.map
