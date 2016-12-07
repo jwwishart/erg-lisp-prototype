@@ -140,7 +140,47 @@ let dumpScope = () => {
     console.log(_scopes);
 }
 
-function evaluate(parsed: Atom[]) {
+function evaluate(parsed: any) {
+    let last = undefined;
+
+    // TODO this is final result printing NOT evaluation!!!!
+    function printExpression(expression, isFirst) {
+        let item = findInScope(expression);
+
+        // Functions
+        if (isFirst && item != null && isFunction(item)) {
+            return "#<procedure:global." + expression + ">";
+        }
+
+        // Lists
+        if (isArray(expression)) {
+            // TODO need to recursively print the parsed form out not just
+            //   JSON.stringify, and print () not []
+            return "" + JSON.stringify(expression) + '';
+        } else if (isArray(expression) && expression.isQuoted === true) {
+            // TODO need to recursively print the parsed form out not just
+            //   JSON.stringify, and print () not []
+            return "'" + JSON.stringify(expression) + '';
+        }
+        return expression;
+    }
+
+    // Parse Each Top Level Expression
+    for(var i = 0; i < parsed.length; i++) {
+        let isFirst = i == 0;
+
+        last = printExpression(parsed[i], isFirst);
+    }
+
+    // TODO printExpression() ought be called here on the last evaluated expression?
+    //  OR should all expressions be evaluated and shown to the user in a REPL 
+    //  situation?
+
+    // Last thing evaluated is result? Sorta.
+    return "=> " + (last === undefined ? "Unspecified" : last);
+}
+
+function _evaluate(parsed: Atom[]) {
     DEBUG && console.log(JSON.stringify(parsed));
 
     function internalEvaluate(parsed: Atom) {

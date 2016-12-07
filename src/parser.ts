@@ -45,54 +45,77 @@ function parse(code: string) {
     let next = () => { return code[i++]; };
     let c = null;
     let expression = null; // current list expression we are parsing goes in here till done?
+    let listStack = null;
+    let hasDataIndicator = false;
 
     let push = (it) => {
-        // UPTO(jwwishart)
-        // UPTO(jwwishart)
-        // UPTO(jwwishart)
-        // UPTO(jwwishart)
-        // UPTO(jwwishart)
-        // UPTO(jwwishart) need to do nested lists ... :o) so expression must contain
-        //  the current list maybe, and a stack of parents need to be available for handling
-        //  in ALL cases where we start a list I suppose???
-        // UPTO(jwwishart)
-        // UPTO(jwwishart)
-        // UPTO(jwwishart)
-        // UPTO(jwwishart)
-        
         // If we pushed a list then append to the list
-        if (Object.prototype.toString.call(expression) === '[object Array]') {
-            expression.push(it);
+        if (isArray(it)) {
+            if (listStack == null) {
+                listStack = [it];
+            } else {
+                listStack.push(it);
+            }
+
             return;
         }
 
-        // if anything else it is an expression so just push it as it is... 
-        if (expression == null) {
-            results.push(it) 
-            expression = it;
+        // if we are in a list push the expression onto the end of the bottom most stack 
+        if (listStack !== null) {
+            listStack[listStack.length - 1].push(it);
             return;
-        } else {
-            results.push(it);
         }
+
+        results.push(it);
     }
 
     let completeList = () => {
-        //results.push(expression);
-        expression = null;
+        if (listStack !== null) {
+            // TODO This ought not happen... ? why d owe need this?
+            if (listStack.length === 0) {
+                return;
+            }
+
+            // If at top of stack push list onto the results... expression done
+            if (listStack.length === 1) {
+                results.push(listStack[0]);
+                listStack = null; // no more lists
+                return;
+            }
+
+            // otherwise move the last list into it's parent list as it is done
+            listStack[listStack.length - 2].push(listStack[listStack.length - 1]);
+            listStack.splice(listStack.length - 1, 1); 
+            return;
+        }
+
+        throw new Error("we ought not get here... where is this list expected...?");
     }
 
-    let parseInteger = () => {
+    let parserNumber = () => {
         i--; // Keeps while loop consistent...
 
         let wholeNumber = '';
+        let doneDecimal = false;
         while ((c = next()) !== undefined) {
+            if (c === '.' && doneDecimal === false) {
+                doneDecimal = true;
+                wholeNumber += c;
+                continue;
+            }
+
             let asN = parseInt(c, 10);
             if (isNaN(asN)) break;
             wholeNumber += c;
         }
 
         i--; // Move back a char so next sections next() call will be on current char
-        return wholeNumber;
+
+        if (doneDecimal) {
+            return parseFloat(wholeNumber);
+        } else {
+            return parseInt(wholeNumber, 10);
+        }
     }
 
     let parseString = () => {
@@ -151,7 +174,7 @@ function parse(code: string) {
             case '9':
             {
                 // TODO(jwwishart) decimal, bignumber, ratio
-                push(parseInteger());
+                push(parserNumber());
 
                 continue;
             }
@@ -172,13 +195,19 @@ function parse(code: string) {
 
         // TODO(jwwishart) Quote...  convert to quoted expression without need for
         //  this stuff...
-        // if (c == "'") {
-        //     hasDataIndicator = true;
-        //     continue;
-        // }
+        if (c == "'") {
+            hasDataIndicator = true;
+            continue;
+        }
 
         if (c === '(') {
-            push([]);
+            let toPush = [];
+            if (hasDataIndicator) {
+                toPush["isQuoted"] = true;
+                hasDataIndicator = false;
+            }
+
+            push(toPush);
             continue;
         }
 

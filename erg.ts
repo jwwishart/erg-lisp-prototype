@@ -34,16 +34,32 @@ let expression = `(println 5)`;
 // TODO define 'add' as (+ a b)
 // TODO comments...
 
+
 DEBUG = true;
 
-console.log(parse(`1`));
-console.log(parse(`()`));
-console.log(parse(`(+ 1 2)`));
-console.log(parse(`(print "Hello World")`));
-console.log(parse(`(print (+ 1 2))`));
 
-//print(
-//    evaluate(parse(expression))
-  //  );
+// Parsing Tests
+//
 
-  DEBUG && dumpScope();
+var expressions = [
+    `1`,
+    `"Hello World"`,
+    `42`,
+    `3.14159`,
+    `+`,
+    `()`,
+    `'(a b c d)`,
+    `(+ 1 2)`,
+    `(print "Hello World")`,
+    `(print (+ 1 2))`,
+    `(print '(+ 1 2))`,
+];
+
+for (var i = 0; i < expressions.length; i++) {
+    //console.log(parse(expressions[i]));
+    console.log(evaluate(parse(expressions[i])));
+}
+
+// print(evaluate(parse(expression)));
+
+DEBUG && dumpScope();

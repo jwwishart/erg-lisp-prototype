@@ -2,6 +2,12 @@ var DEBUG = false;
 function isObject(thing) {
     return Object.prototype.toString.call(thing) === "[object Object]";
 }
+function isArray(it) {
+    return Object.prototype.toString.call(it) === '[object Array]';
+}
+function isFunction(it) {
+    return Object.prototype.toString.call(it) === '[object Function]';
+}
 var AtomType;
 (function (AtomType) {
     AtomType[AtomType["None"] = 0] = "None";
@@ -30,34 +36,62 @@ function parse(code) {
     var next = function () { return code[i++]; };
     var c = null;
     var expression = null;
+    var listStack = null;
+    var hasDataIndicator = false;
     var push = function (it) {
-        if (Object.prototype.toString.call(expression) === '[object Array]') {
-            expression.push(it);
+        if (isArray(it)) {
+            if (listStack == null) {
+                listStack = [it];
+            }
+            else {
+                listStack.push(it);
+            }
             return;
         }
-        if (expression == null) {
-            results.push(it);
-            expression = it;
+        if (listStack !== null) {
+            listStack[listStack.length - 1].push(it);
             return;
         }
-        else {
-            results.push(it);
-        }
+        results.push(it);
     };
     var completeList = function () {
-        expression = null;
+        if (listStack !== null) {
+            if (listStack.length === 0) {
+                return;
+            }
+            if (listStack.length === 1) {
+                results.push(listStack[0]);
+                listStack = null;
+                return;
+            }
+            listStack[listStack.length - 2].push(listStack[listStack.length - 1]);
+            listStack.splice(listStack.length - 1, 1);
+            return;
+        }
+        throw new Error("we ought not get here... where is this list expected...?");
     };
-    var parseInteger = function () {
+    var parserNumber = function () {
         i--;
         var wholeNumber = '';
+        var doneDecimal = false;
         while ((c = next()) !== undefined) {
+            if (c === '.' && doneDecimal === false) {
+                doneDecimal = true;
+                wholeNumber += c;
+                continue;
+            }
             var asN = parseInt(c, 10);
             if (isNaN(asN))
                 break;
             wholeNumber += c;
         }
         i--;
-        return wholeNumber;
+        if (doneDecimal) {
+            return parseFloat(wholeNumber);
+        }
+        else {
+            return parseInt(wholeNumber, 10);
+        }
     };
     var parseString = function () {
         var wholeWord = '';
@@ -101,7 +135,7 @@ function parse(code) {
             case '8':
             case '9':
                 {
-                    push(parseInteger());
+                    push(parserNumber());
                     continue;
                 }
         }
@@ -109,8 +143,17 @@ function parse(code) {
             push(parseString());
             continue;
         }
+        if (c == "'") {
+            hasDataIndicator = true;
+            continue;
+        }
         if (c === '(') {
-            push([]);
+            var toPush = [];
+            if (hasDataIndicator) {
+                toPush["isQuoted"] = true;
+                hasDataIndicator = false;
+            }
+            push(toPush);
             continue;
         }
         if (c === ')') {
@@ -222,6 +265,27 @@ var dumpScope = function () {
     console.log(_scopes);
 };
 function evaluate(parsed) {
+    var last = undefined;
+    function printExpression(expression, isFirst) {
+        var item = findInScope(expression);
+        if (isFirst && item != null && isFunction(item)) {
+            return "#<procedure:global." + expression + ">";
+        }
+        if (isArray(expression)) {
+            return "" + JSON.stringify(expression) + '';
+        }
+        else if (isArray(expression) && expression.isQuoted === true) {
+            return "'" + JSON.stringify(expression) + '';
+        }
+        return expression;
+    }
+    for (var i = 0; i < parsed.length; i++) {
+        var isFirst = i == 0;
+        last = printExpression(parsed[i], isFirst);
+    }
+    return "=> " + (last === undefined ? "Unspecified" : last);
+}
+function _evaluate(parsed) {
     DEBUG && console.log(JSON.stringify(parsed));
     function internalEvaluate(parsed) {
         if (parsed.Type === AtomType.Symbol) {
@@ -260,10 +324,21 @@ function evaluate(parsed) {
 }
 var expression = "(println 5)";
 DEBUG = true;
-console.log(parse("1"));
-console.log(parse("()"));
-console.log(parse("(+ 1 2)"));
-console.log(parse("(print \"Hello World\")"));
-console.log(parse("(print (+ 1 2))"));
+var expressions = [
+    "1",
+    "\"Hello World\"",
+    "42",
+    "3.14159",
+    "+",
+    "()",
+    "'(a b c d)",
+    "(+ 1 2)",
+    "(print \"Hello World\")",
+    "(print (+ 1 2))",
+    "(print '(+ 1 2))",
+];
+for (var i = 0; i < expressions.length; i++) {
+    console.log(evaluate(parse(expressions[i])));
+}
 DEBUG && dumpScope();
 //# sourceMappingURL=erg.js.map
