@@ -8,7 +8,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceRoot}/erg.js",
+            "program": "${workspaceRoot}/erg.ts",
             "cwd": "${workspaceRoot}",
             "outFiles": [],
             "sourceMaps": true

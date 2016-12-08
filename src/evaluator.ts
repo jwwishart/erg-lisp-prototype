@@ -140,44 +140,64 @@ let dumpScope = () => {
     console.log(_scopes);
 }
 
-function evaluate(parsed: any) {
-    let last = undefined;
+function print(expressions) {
+    var result = "";
 
-    // TODO this is final result printing NOT evaluation!!!!
-    function printExpression(expression, isFirst) {
+    if (typeof expressions === 'number') return expressions.toString();
+    if (typeof expressions === 'string') return '"' + expressions.toString() + '"';
+    if (expressions._type  === "symbol")  return expressions.name;
+
+    result += '(';
+    for (var i = 0; i < expressions.length; i++) {
+
+        if (i >= 1) result += ' ';
+
+        let expression = expressions[i];
         let item = findInScope(expression);
 
-        // Functions
-        if (isFirst && item != null && isFunction(item)) {
-            return "#<procedure:global." + expression + ">";
-        }
-
-        // Lists
-        if (isArray(expression)) {
-            // TODO need to recursively print the parsed form out not just
-            //   JSON.stringify, and print () not []
-            return "" + JSON.stringify(expression) + '';
+        // TODO this bit of code could be for evaluation expression results for procedures
+        // if (item != null && isFunction(item)) {
+        //     result += "#<procedure:global." + expression + ">";
+        // } else 
+        if (typeof expression === 'string') {
+            result += '"' + expression.toString() + '"';
+        } else if (expression._type === "symbol") {
+            result += expression.name;
+        } else if (isArray(expression)) {
+            result += print(expression);
         } else if (isArray(expression) && expression.isQuoted === true) {
-            // TODO need to recursively print the parsed form out not just
-            //   JSON.stringify, and print () not []
-            return "'" + JSON.stringify(expression) + '';
+            result += "'(" + print(expression) + ")";
+        } else {
+            result += expression.toString();
         }
-        return expression;
     }
+    result += ')';
 
-    // Parse Each Top Level Expression
-    for(var i = 0; i < parsed.length; i++) {
-        let isFirst = i == 0;
+    return result;
+}
 
-        last = printExpression(parsed[i], isFirst);
+
+
+function evaluate(parsed: any) {
+    // Iterate all Expressions given us one at a time
+    let last = undefined;
+
+    for (var i = 0; i < parsed.length; i++) {
+        last = evaluateExpression(parsed[i]);
     }
 
     // TODO printExpression() ought be called here on the last evaluated expression?
     //  OR should all expressions be evaluated and shown to the user in a REPL 
     //  situation?
 
+    
     // Last thing evaluated is result? Sorta.
-    return "=> " + (last === undefined ? "Unspecified" : last);
+    return last;
+    //return "=> " + (last === undefined ? "Unspecified" : last);
+}
+
+function evaluateExpression(expression: any) {
+    return expression;
 }
 
 function _evaluate(parsed: Atom[]) {

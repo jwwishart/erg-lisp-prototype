@@ -30,6 +30,13 @@ var TokenInfo = (function () {
     }
     return TokenInfo;
 }());
+var Symbol = (function () {
+    function Symbol(name) {
+        this._type = "symbol";
+        this.name = name;
+    }
+    return Symbol;
+}());
 function parse(code) {
     var i = 0;
     var results = [];
@@ -108,7 +115,7 @@ function parse(code) {
         }
         return wholeWord;
     };
-    var parseSymobol = function () {
+    var parseSymbol = function () {
         i--;
         var wholeWord = '';
         while ((c = next()) !== undefined &&
@@ -118,7 +125,7 @@ function parse(code) {
             wholeWord += c;
         }
         i--;
-        return wholeWord;
+        return new Symbol(wholeWord);
     };
     while ((c = next()) !== undefined) {
         if (c === ' ' || c === '\t' || c === '\n' || c === '\r')
@@ -166,12 +173,12 @@ function parse(code) {
             case '/':
             case '*':
                 {
-                    push(c);
+                    push(new Symbol(c));
                     continue;
                 }
         }
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-            push(parseSymobol());
+            push(parseSymbol());
             continue;
         }
         var tokenInfo = function () {
@@ -264,26 +271,48 @@ var findInScope = function (symbol) {
 var dumpScope = function () {
     console.log(_scopes);
 };
+function print(expressions) {
+    var result = "";
+    if (typeof expressions === 'number')
+        return expressions.toString();
+    if (typeof expressions === 'string')
+        return '"' + expressions.toString() + '"';
+    if (expressions._type === "symbol")
+        return expressions.name;
+    result += '(';
+    for (var i = 0; i < expressions.length; i++) {
+        if (i >= 1)
+            result += ' ';
+        var expression_1 = expressions[i];
+        var item = findInScope(expression_1);
+        if (typeof expression_1 === 'string') {
+            result += '"' + expression_1.toString() + '"';
+        }
+        else if (expression_1._type === "symbol") {
+            result += expression_1.name;
+        }
+        else if (isArray(expression_1)) {
+            result += print(expression_1);
+        }
+        else if (isArray(expression_1) && expression_1.isQuoted === true) {
+            result += "'(" + print(expression_1) + ")";
+        }
+        else {
+            result += expression_1.toString();
+        }
+    }
+    result += ')';
+    return result;
+}
 function evaluate(parsed) {
     var last = undefined;
-    function printExpression(expression, isFirst) {
-        var item = findInScope(expression);
-        if (isFirst && item != null && isFunction(item)) {
-            return "#<procedure:global." + expression + ">";
-        }
-        if (isArray(expression)) {
-            return "" + JSON.stringify(expression) + '';
-        }
-        else if (isArray(expression) && expression.isQuoted === true) {
-            return "'" + JSON.stringify(expression) + '';
-        }
-        return expression;
-    }
     for (var i = 0; i < parsed.length; i++) {
-        var isFirst = i == 0;
-        last = printExpression(parsed[i], isFirst);
+        last = evaluateExpression(parsed[i]);
     }
-    return "=> " + (last === undefined ? "Unspecified" : last);
+    return last;
+}
+function evaluateExpression(expression) {
+    return expression;
 }
 function _evaluate(parsed) {
     DEBUG && console.log(JSON.stringify(parsed));
@@ -336,9 +365,10 @@ var expressions = [
     "(print \"Hello World\")",
     "(print (+ 1 2))",
     "(print '(+ 1 2))",
+    "(var duck \"quack\")",
 ];
 for (var i = 0; i < expressions.length; i++) {
-    console.log(evaluate(parse(expressions[i])));
+    console.log("p> " + print(parse(expressions[i])[0]));
+    console.log("=> " + print(evaluate(parse(expressions[i]))));
 }
-DEBUG && dumpScope();
 //# sourceMappingURL=erg.js.map

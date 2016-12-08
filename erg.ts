@@ -53,13 +53,19 @@ var expressions = [
     `(print "Hello World")`,
     `(print (+ 1 2))`,
     `(print '(+ 1 2))`,
+    `(var duck "quack")`,
 ];
 
 for (var i = 0; i < expressions.length; i++) {
+    // Print the Parsed Expression (first one only... remember parse() returns
+    // a list... we don't want to parse the list to the print() method...
+    console.log("p> " + print(parse(expressions[i])[0]));
+    console.log("=> " + print(evaluate(parse(expressions[i]))));
     //console.log(parse(expressions[i]));
-    console.log(evaluate(parse(expressions[i])));
+    //console.log(evaluate(parse(expressions[i])));
+    //console.log(print(parse(expressions[i])));
 }
 
 // print(evaluate(parse(expression)));
 
-DEBUG && dumpScope();
+// DEBUG && dumpScope();
