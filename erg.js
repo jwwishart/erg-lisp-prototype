@@ -380,7 +380,9 @@ function _evaluate(parsed) {
 }
 var expression = "(println 5)";
 DEBUG = true;
-var expressions = [];
+var expressions = [
+    "(print \"Hello World\")",
+];
 for (var i = 0; i < expressions.length; i++) {
     console.log("p> " + print(read(expressions[i])[0]));
     console.log("=> " + print(evaluate(read(expressions[i]))));

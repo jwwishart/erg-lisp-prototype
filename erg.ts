@@ -50,7 +50,7 @@ var expressions = [
     // `()`,
     // `'(a b c d)`,
     // `(+ 1 2)`,
-    // `(print "Hello World")`,
+    `(print "Hello World")`,
     // `(print (+ 1 2))`,
     // `(print '(+ 1 2))`,
     // `(var duck "quack")`,
