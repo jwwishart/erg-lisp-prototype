@@ -37,7 +37,7 @@ var Symbol = (function () {
     }
     return Symbol;
 }());
-function parse(code) {
+function read(code) {
     var i = 0;
     var results = [];
     var next = function () { return code[i++]; };
@@ -197,7 +197,7 @@ var SymbolType;
     SymbolType[SymbolType["Function"] = 0] = "Function";
     SymbolType[SymbolType["Data"] = 1] = "Data";
 })(SymbolType || (SymbolType = {}));
-var globalScopeSymbols = {
+var GlobalScope = {
     '-': {
         Type: SymbolType.Function,
         Arguments: [{
@@ -254,10 +254,10 @@ var globalScopeSymbols = {
         }
         scope()[name] = value;
     },
-    'set': function (name, value) { globalScopeSymbols.var(name, value); }
+    'set': function (name, value) { GlobalScope.var(name, value); }
 };
 var _scopes = [
-    globalScopeSymbols
+    GlobalScope
 ];
 var scope = function () { return _scopes[_scopes.length - 1]; };
 var findInScope = function (symbol) {
@@ -273,6 +273,8 @@ var dumpScope = function () {
 };
 function print(expressions) {
     var result = "";
+    if (typeof expressions === 'function')
+        return expressions.toString();
     if (typeof expressions === 'number')
         return expressions.toString();
     if (typeof expressions === 'string')
@@ -312,6 +314,31 @@ function evaluate(parsed) {
     return last;
 }
 function evaluateExpression(expression) {
+    if (typeof expression === 'number')
+        return expression;
+    if (expression._type === "symbol") {
+        var foundSymbol = findInScope(expression.name);
+        if (typeof foundSymbol === 'function')
+            return foundSymbol;
+        return expression.name;
+    }
+    if (typeof expression === 'string')
+        return expression;
+    if (isArray(expression)) {
+        var toExecute = findInScope(expression[0].name);
+        if (toExecute) {
+            var args = [];
+            for (var i_1 = 1; i_1 < expression.length; i_1++) {
+                if (expression[i_1].Type == AtomType.Symbol) {
+                    args.push(expression[i_1]);
+                    continue;
+                }
+                args.push(evaluateExpression(expression[i_1]));
+            }
+            return toExecute.apply(null, args);
+        }
+        return expression;
+    }
     return expression;
 }
 function _evaluate(parsed) {
@@ -332,15 +359,15 @@ function _evaluate(parsed) {
         }
         if (parsed.Type == AtomType.Code) {
             var args = [];
-            for (var i_1 = 1; i_1 < parsed.Data.length; i_1++) {
-                if (parsed.Data[i_1].Type == AtomType.Symbol) {
-                    args.push(parsed.Data[i_1]);
+            for (var i_2 = 1; i_2 < parsed.Data.length; i_2++) {
+                if (parsed.Data[i_2].Type == AtomType.Symbol) {
+                    args.push(parsed.Data[i_2]);
                     continue;
                 }
-                args.push(internalEvaluate(parsed.Data[i_1]));
+                args.push(internalEvaluate(parsed.Data[i_2]));
             }
-            var method = globalScopeSymbols[parsed.Data[0].Data];
-            return method.apply(globalScopeSymbols, args);
+            var method = GlobalScope[parsed.Data[0].Data];
+            return method.apply(GlobalScope, args);
         }
     }
     for (var i = 0; i < parsed.length; i++) {
@@ -353,22 +380,9 @@ function _evaluate(parsed) {
 }
 var expression = "(println 5)";
 DEBUG = true;
-var expressions = [
-    "1",
-    "\"Hello World\"",
-    "42",
-    "3.14159",
-    "+",
-    "()",
-    "'(a b c d)",
-    "(+ 1 2)",
-    "(print \"Hello World\")",
-    "(print (+ 1 2))",
-    "(print '(+ 1 2))",
-    "(var duck \"quack\")",
-];
+var expressions = [];
 for (var i = 0; i < expressions.length; i++) {
-    console.log("p> " + print(parse(expressions[i])[0]));
-    console.log("=> " + print(evaluate(parse(expressions[i]))));
+    console.log("p> " + print(read(expressions[i])[0]));
+    console.log("=> " + print(evaluate(read(expressions[i]))));
 }
 //# sourceMappingURL=erg.js.map

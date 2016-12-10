@@ -43,7 +43,7 @@ enum SymbolType {
     Data
 }
 
-let globalScopeSymbols = {
+let GlobalScope = {
     // Native Code for Execution
     //
     '-': { 
@@ -119,11 +119,11 @@ let globalScopeSymbols = {
         // TODO what if value is an Atom? should throw?
         scope()[name] = value; 
     },
-    'set': function(name, value) { globalScopeSymbols.var(name, value); }
+    'set': function(name, value) { GlobalScope.var(name, value); }
 };
 
 let _scopes = [
-    globalScopeSymbols
+    GlobalScope
 ]
 
 let scope = () => _scopes[_scopes.length - 1]; 
@@ -143,6 +143,7 @@ let dumpScope = () => {
 function print(expressions) {
     var result = "";
 
+    if (typeof expressions === 'function') return  expressions.toString();
     if (typeof expressions === 'number') return expressions.toString();
     if (typeof expressions === 'string') return '"' + expressions.toString() + '"';
     if (expressions._type  === "symbol")  return expressions.name;
@@ -197,6 +198,46 @@ function evaluate(parsed: any) {
 }
 
 function evaluateExpression(expression: any) {
+    if (typeof expression === 'number') return expression;
+    // TODO(jwwishart) symbol needs to  be evaluated to itself or the value that it might store as a variable if it is?
+    // TODO(jwwishart) need to figure out if this exists as a varible/function etc... 
+    //  or whether to just return the symbol
+    if (expression._type  === "symbol") {
+        let foundSymbol = findInScope(expression.name);
+
+        if (typeof foundSymbol === 'function') return foundSymbol;
+        // TODO(jwwishart) need to get arguments and evaulate now!
+        return expression.name;
+    }
+
+    if (typeof expression === 'string') return expression;
+
+    if (isArray(expression)) {
+        // TODO(jwwishart) handle error 
+        // TODO(jwwishart) get arguments and ensure its a function
+        let toExecute = findInScope(expression[0].name);
+        if (toExecute) {
+            let args = [];
+
+            // TODO we ought to validate that the first thing is a symbol?
+            // NOTE we don't parse the first symbol
+            for (let i = 1; i < expression.length; i++) {
+                // Have to let the function evaluate the symbol if it
+                // needs to... the function might need to create the 
+                // symbol in scope (var,set) or evaluate it (print)
+                if (expression[i].Type == AtomType.Symbol) {
+                    args.push(expression[i]);
+                    continue;
+                }
+
+                args.push(evaluateExpression(expression[i]));
+            }
+
+            return toExecute.apply(null, args);
+        }
+
+        return expression;
+    }
     return expression;
 }
 
@@ -242,8 +283,8 @@ function _evaluate(parsed: Atom[]) {
                 args.push(internalEvaluate(parsed.Data[i]));
             }
 //console.log("Symbol: " + JSON.stringify(parsed.Data[0]));
-            let method = globalScopeSymbols[parsed.Data[0].Data]; // symbol! .. .?
-            return method.apply(globalScopeSymbols, args); 
+            let method = GlobalScope[parsed.Data[0].Data]; // symbol! .. .?
+            return method.apply(GlobalScope, args); 
             // Evaluate from right to left...
         }
     }

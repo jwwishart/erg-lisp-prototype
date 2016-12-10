@@ -1,6 +1,6 @@
 /// <reference path="src/util.ts" />
-/// <reference path="src/parser.ts" />
-/// <reference path="src/evaluator.ts" />
+/// <reference path="src/read.ts" />
+/// <reference path="src/eval.ts" />
 
 
 
@@ -42,25 +42,25 @@ DEBUG = true;
 //
 
 var expressions = [
-    `1`,
-    `"Hello World"`,
-    `42`,
-    `3.14159`,
-    `+`,
-    `()`,
-    `'(a b c d)`,
-    `(+ 1 2)`,
-    `(print "Hello World")`,
-    `(print (+ 1 2))`,
-    `(print '(+ 1 2))`,
-    `(var duck "quack")`,
+    // `1`,
+    // `"Hello World"`,
+    //`42`,
+    // `3.14159`,
+    // `+`,
+    // `()`,
+    // `'(a b c d)`,
+    // `(+ 1 2)`,
+    // `(print "Hello World")`,
+    // `(print (+ 1 2))`,
+    // `(print '(+ 1 2))`,
+    // `(var duck "quack")`,
 ];
 
 for (var i = 0; i < expressions.length; i++) {
     // Print the Parsed Expression (first one only... remember parse() returns
     // a list... we don't want to parse the list to the print() method...
-    console.log("p> " + print(parse(expressions[i])[0]));
-    console.log("=> " + print(evaluate(parse(expressions[i]))));
+    console.log("p> " + print(read(expressions[i])[0]));
+    console.log("=> " + print(evaluate(read(expressions[i]))));
     //console.log(parse(expressions[i]));
     //console.log(evaluate(parse(expressions[i])));
     //console.log(print(parse(expressions[i])));

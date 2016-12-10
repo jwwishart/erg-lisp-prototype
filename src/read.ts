@@ -48,7 +48,7 @@ class Symbol {
     (+ 1 2) = should generate a simple list with  + as a symbol, 1 and 2 as literals
         the parser
  */
-function parse(code: string) {
+function read(code: string) {
     let i = 0;
     let results = []; // Array of expressions
     let next = () => { return code[i++]; };
@@ -80,7 +80,7 @@ function parse(code: string) {
 
     let completeList = () => {
         if (listStack !== null) {
-            // TODO This ought not happen... ? why d owe need this?
+            // TODO This ought not happen... ? why do we need this?
             if (listStack.length === 0) {
                 return;
             }
