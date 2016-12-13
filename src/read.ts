@@ -1,7 +1,34 @@
 
+/*
+  read()
 
-// Types
-//
+  The read method takes s-expressions and converts them into internal
+  structures which can then be evaluated by eval() or printed
+
+  There are a variety of things we need to cover when converting from
+  s-expressions to these internal structures
+
+  - Unspecified: object indicating Unspecified result
+  - Null ?
+  
+  - Integer 
+  - Decimal/Float/BigNumber?
+  - Boolean
+  - String
+  - Characater
+  
+  - Symbol
+
+  - List
+    - Procedure and arguments
+    - Lists (quoted i.e. not evaluated)
+
+  - Any of the above quoted(?)
+  - Map (i.e. dictionary with key/values)
+
+ */
+
+
 
 enum AtomType {
     None,
