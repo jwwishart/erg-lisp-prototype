@@ -8,34 +8,110 @@ function isArray(it) {
 function isFunction(it) {
     return Object.prototype.toString.call(it) === '[object Function]';
 }
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var AtomType;
 (function (AtomType) {
     AtomType[AtomType["None"] = 0] = "None";
     AtomType[AtomType["Symbol"] = 1] = "Symbol";
-    AtomType[AtomType["Integer"] = 2] = "Integer";
+    AtomType[AtomType["Number"] = 2] = "Number";
     AtomType[AtomType["Decimal"] = 3] = "Decimal";
     AtomType[AtomType["Boolean"] = 4] = "Boolean";
     AtomType[AtomType["String"] = 5] = "String";
     AtomType[AtomType["List"] = 6] = "List";
-    AtomType[AtomType["Code"] = 7] = "Code";
+    AtomType[AtomType["Map"] = 7] = "Map";
 })(AtomType || (AtomType = {}));
 var Atom = (function () {
-    function Atom() {
-        this.IsData = false;
+    function Atom(type, data, isQuoted) {
+        if (isQuoted === void 0) { isQuoted = false; }
+        this.Type = type;
+        this.Data = data;
+        this.IsQuoted = isQuoted;
     }
+    Atom.prototype.getdata = function () {
+        if (this.Type == AtomType.List || this.Type == AtomType.Map) {
+            return this;
+        }
+        return this.Data;
+    };
     return Atom;
 }());
+var Symbol = (function (_super) {
+    __extends(Symbol, _super);
+    function Symbol(name, isQuoted) {
+        if (isQuoted === void 0) { isQuoted = false; }
+        _super.call(this, AtomType.Symbol, name, isQuoted);
+        this.Type = AtomType.Symbol;
+        this.IsQuoted = false;
+    }
+    return Symbol;
+}(Atom));
+var AtomString = (function (_super) {
+    __extends(AtomString, _super);
+    function AtomString(data, isQuoted) {
+        if (isQuoted === void 0) { isQuoted = false; }
+        _super.call(this, data);
+        this.Type = AtomType.String;
+        this.IsQuoted = false;
+        this.Data = null;
+        this.Type = AtomType.String;
+        this.IsQuoted = isQuoted;
+    }
+    return AtomString;
+}(String));
+var AtomArray = (function (_super) {
+    __extends(AtomArray, _super);
+    function AtomArray(data, isQuoted) {
+        if (isQuoted === void 0) { isQuoted = false; }
+        _super.call(this);
+        this.Type = AtomType.List;
+        this.IsQuoted = false;
+        this.Type = AtomType.List;
+        this.IsQuoted = isQuoted;
+    }
+    return AtomArray;
+}(Array));
+var AtomMap = (function (_super) {
+    __extends(AtomMap, _super);
+    function AtomMap(data, isQuoted) {
+        if (isQuoted === void 0) { isQuoted = false; }
+        _super.call(this);
+        this.Type = AtomType.Map;
+        this.IsQuoted = false;
+        this.Type = AtomType.Map;
+        this.IsQuoted = isQuoted;
+    }
+    return AtomMap;
+}(Object));
+var AtomNumber = (function (_super) {
+    __extends(AtomNumber, _super);
+    function AtomNumber(data, isQuoted) {
+        if (isQuoted === void 0) { isQuoted = false; }
+        _super.call(this, AtomType.Number, data, isQuoted);
+        this.Type = AtomType.Number;
+        this.IsQuoted = false;
+        this.Data = 0;
+    }
+    return AtomNumber;
+}(Atom));
+var AtomBoolean = (function (_super) {
+    __extends(AtomBoolean, _super);
+    function AtomBoolean(data, isQuoted) {
+        if (isQuoted === void 0) { isQuoted = false; }
+        _super.call(this, AtomType.Boolean, data, isQuoted);
+        this.Type = AtomType.Boolean;
+        this.IsQuoted = false;
+        this.Data = false;
+    }
+    return AtomBoolean;
+}(Atom));
 var TokenInfo = (function () {
     function TokenInfo() {
     }
     return TokenInfo;
-}());
-var Symbol = (function () {
-    function Symbol(name) {
-        this._type = "symbol";
-        this.name = name;
-    }
-    return Symbol;
 }());
 function read(code) {
     var i = 0;

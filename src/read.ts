@@ -28,41 +28,115 @@
 
  */
 
-
+interface IAtom {
+    Type: AtomType,
+    IsQuoted: boolean,
+}
 
 enum AtomType {
     None,
 
     Symbol,
 
-    Integer,
-    Decimal,
+    Number,  // Standard JavaScript number
+    Decimal, // Specialized data type for precice calcuations 
     Boolean,
     String, // TOOD symbol?
+
     List,
-    Code
+    Map
 }
 
-class Atom {
+class Atom implements IAtom {
+    constructor(type: AtomType, data: number | boolean | string | null, isQuoted: boolean = false) {
+        this.Type = type;
+        this.Data = data;
+        this.IsQuoted = isQuoted;
+    }
+
     Type: AtomType;
-    // TODO try and make this type restricted?
-    Data: any; // int, deimal, boolean, string, list, code etc...
-    IsData?: Boolean = false;
+    IsQuoted: boolean;
+    Data: number | boolean | string | null;
+
+    getdata() :any {
+        if (this.Type == AtomType.List || this.Type == AtomType.Map) {
+            return this;
+        } 
+
+        return this.Data;
+    }
 }
 
+class Symbol extends Atom {
+    constructor(name: string, isQuoted: boolean = false) {
+        super(AtomType.Symbol, name, isQuoted);
+    }
+
+    Type: AtomType = AtomType.Symbol;
+    IsQuoted: boolean = false;
+    Data: string
+}
+
+class AtomString extends String implements IAtom {
+    constructor(data: string, isQuoted: boolean = false) {
+        super(data);
+        this.Type = AtomType.String;
+        this.IsQuoted = isQuoted;
+    }
+
+    Type: AtomType = AtomType.String;
+    IsQuoted: boolean = false;
+    Data: string = null
+}
+
+class AtomArray extends Array implements IAtom {
+    constructor(data: Array<any>, isQuoted: boolean = false) {
+        super();
+        this.Type = AtomType.List;
+        this.IsQuoted = isQuoted;
+    }
+
+    Type: AtomType = AtomType.List;
+    IsQuoted: boolean = false;
+}
+
+class AtomMap extends Object {
+    constructor(data: Object, isQuoted: boolean = false) {
+        super();
+        this.Type = AtomType.Map;
+        this.IsQuoted = isQuoted;
+    }
+
+    Type: AtomType = AtomType.Map;
+    IsQuoted: boolean = false;
+}
+
+class AtomNumber extends Atom {
+    constructor(data: number, isQuoted: boolean = false) {
+        super(AtomType.Number, data, isQuoted)
+    }
+
+    Type: AtomType = AtomType.Number;
+    IsQuoted: boolean = false;
+    Data: number = 0;
+}
+
+class AtomBoolean extends Atom {
+    constructor(data: boolean, isQuoted: boolean = false) {
+        super(AtomType.Boolean, data, isQuoted)
+    }
+
+    Type: AtomType = AtomType.Boolean;
+    IsQuoted: boolean = false;
+    Data: boolean = false;
+}
+
+
+// TODO(jwwishart) track and write proper lexical information
 class TokenInfo {
     index: number;
     line: number;
     col: number;
-}
-
-class Symbol {
-    constructor(name: string) {
-        this.name = name;
-    }
-
-    name: string;
-    _type: string = "symbol";
 }
 
 
