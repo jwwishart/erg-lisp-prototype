@@ -44,82 +44,21 @@ enum SymbolType {
 }
 
 let GlobalScope = {
-    // Native Code for Execution
-    //
-    '-': { 
-        Type: SymbolType.Function,
-        Arguments: [{
-            Name: 'a',
-            Type: AtomType.Integer
-        },{
-            Name: 'b',
-            Type: AtomType.Integer
-        },],
-        ReturnType: AtomType.Integer,
-        Data: (a, b) => { return a + b}
-    },
+    '+': (a, b) => {
+        // TODO(jwwishart) is this right... take the atom and convert it to other atoms?
+        //  this whole idea seems strange... more reasonable that this stuff has
+        //  no knowledge of this and simple returns the type and the code figures it all out
+        //  BUT this is simpler... and this stuff would be evaluated in lisp generally ?????
 
-    'printf': { 
-        Type: SymbolType.Function,
-        Arguments: [{
-            Name: 'a',
-            Type: AtomType.String
-        }],
-        ReturnType: AtomType.Integer,
-        Data: (a) => {  console.log(a) }
+        // TODO(jwwishart) type restrictions? how to specify restriction of types?
+        // TODO(jwwishart) assert a and b are numbers or strings or ??? 
+        return new AtomNumber(a.Data + b.Data);
     },
-
-    '+': (a, b) => a + b,
-    '/': (a, b) => a / b,
-    '*': (a, b) => a * b,
-    'print' : (text) => {
-        if (Object.prototype.hasOwnProperty.call(text, 'Type') && 
-            Object.prototype.hasOwnProperty.call(text, 'Data') &&
-            text.Type === AtomType.Symbol) 
-        {
-            let val = findInScope(text.Data);
-            if (val != null) {
-                console.log(val);
-                return;
-            }
-        }
-
-        // TODO handle error situations from above
-        // TOOD handle other types passed in...?
-        // Else consider the text to be ... well text!
-        console.log(text) 
-    },
-    'println' :(it) => {
-        if (it instanceof String) {
-            console.log(it);
-            return;
-        }
-        if (it instanceof Number) {
-            console.log(it);
-            return;
-        }
-
-        // TODO(jwwishart) We need to handle symbols specially... we need to handle
-        //  lists specially... we need to handle code specially... ? what else.. otherwise
-        //  it can just print it as raw thingy... (quoted lists? quoted anything? how
-        //  is quoted identified?)
-        console.error("NOOOO! What is this!: ");
-        console.error(it);
-    },
-    'var': function(name: any, value) {
-        // If we were passed a symbol Atom for name then we need to
-        // just get the symbol name, we have the value as 2nd arg
-        if (Object.prototype.hasOwnProperty.call(name, 'Type') && 
-            Object.prototype.hasOwnProperty.call(name, 'Data') &&
-            name.Type === AtomType.Symbol) 
-        {
-            name = name.Data;
-        }
-
-        // TODO what if value is an Atom? should throw?
-        scope()[name] = value; 
-    },
-    'set': function(name, value) { GlobalScope.var(name, value); }
+    'print': (toPrint) => {
+        // TODO(jwwishart) again Atom passed in... 
+        // TODO(jwwishart) could be all sorts of things passed in... just strings???
+        console.log(toPrint.Data)
+    }
 };
 
 let _scopes = [
@@ -140,198 +79,87 @@ let dumpScope = () => {
     console.log(_scopes);
 }
 
-function print(expressions) {
-    var result = "";
+function write(it: any) {
+    // TODO(jwwishart) this writes to standard output...
+    console.log(it);
+}
 
-    if (typeof expressions === 'function') return  expressions.toString();
-    if (typeof expressions === 'number') return expressions.toString();
-    if (typeof expressions === 'string') return '"' + expressions.toString() + '"';
-    if (expressions._type  === "symbol")  return expressions.name;
-
-    result += '(';
-    for (var i = 0; i < expressions.length; i++) {
-
-        if (i >= 1) result += ' ';
-
-        let expression = expressions[i];
-        let item = findInScope(expression);
-
-        // TODO this bit of code could be for evaluation expression results for procedures
-        // if (item != null && isFunction(item)) {
-        //     result += "#<procedure:global." + expression + ">";
-        // } else 
-        if (typeof expression === 'string') {
-            result += '"' + expression.toString() + '"';
-        } else if (expression._type === "symbol") {
-            result += expression.name;
-        } else if (isArray(expression)) {
-            result += print(expression);
-        } else if (isArray(expression) && expression.isQuoted === true) {
-            result += "'(" + print(expression) + ")";
-        } else {
-            result += expression.toString();
-        }
+class UnspecifiedAtom extends Atom {
+    constructor() {
+        super(AtomType.Unspecified, null, false);
     }
-    result += ')';
-
-    return result;
 }
 
 
+function eval(toEval: any) {
+    var last = new UnspecifiedAtom();
 
-function evaluate(parsed: any) {
-    // Iterate all Expressions given us one at a time
-    let last = undefined;
+    // Array of Expressions: eval each one one after another
+    //
 
-    for (var i = 0; i < parsed.length; i++) {
-        last = evaluateExpression(parsed[i]);
+    if (toEval.Type == null && toEval.length > 0) {
+        for (let i = 0; i < toEval.length; i++) {
+            last = eval(toEval[i]);
+        }
     }
 
-    // TODO printExpression() ought be called here on the last evaluated expression?
-    //  OR should all expressions be evaluated and shown to the user in a REPL 
-    //  situation?
+    // Primitives
+    // Essentially we just return them... we only evaluate lists that are code essentially
+    //
 
-    
-    // Last thing evaluated is result? Sorta.
+    if ((toEval.Type === AtomType.Boolean 
+         || toEval.Type === AtomType.Number
+         || toEval.Type === AtomType.String
+         || toEval.Type === AtomType.Symbol)) 
+    {
+        return toEval;
+    }
+
+    // Lists (quoted) just return as data;
+    //
+
+    if (toEval.Type === AtomType.List && toEval.IsQuoted) {
+        return toEval;
+    }
+
+    // Lists: evaluate as procedures
+    //
+
+    if (toEval.Type === AtomType.List) {
+        // Empty list, just return it.
+        if (toEval.length === 0) {
+            return toEval;
+        }
+
+        let operator = toEval[0];
+        let args = [];
+
+        let func = findInScope(operator.Data);
+        if (func == null) {
+            console.error("Error: Unable to find procedure: '" + operator.Data + "'");
+        }
+
+        if (toEval.length > 1) {
+            args = toEval.slice(1);
+            for (let j = 0; j < args.length; j++) {
+                args[j] = eval(args[j]);
+            }
+        }
+
+        last = func.apply(scope(), args);
+        
+        if (last == null) last = new UnspecifiedAtom();
+        
+        // TODO(jwwishart) convert to atom?
+        //
+        // - number
+        // - string
+        // - symbol????? can you return symbols???
+        // - lists (data or quoted?)
+        // 
+    }
+
     return last;
-    //return "=> " + (last === undefined ? "Unspecified" : last);
 }
 
-function evaluateExpression(expression: any) {
-    if (typeof expression === 'number') return expression;
-    // TODO(jwwishart) symbol needs to  be evaluated to itself or the value that it might store as a variable if it is?
-    // TODO(jwwishart) need to figure out if this exists as a varible/function etc... 
-    //  or whether to just return the symbol
-    if (expression._type  === "symbol") {
-        let foundSymbol = findInScope(expression.name);
 
-        if (typeof foundSymbol === 'function') return foundSymbol;
-        // TODO(jwwishart) need to get arguments and evaulate now!
-        return expression.name;
-    }
-
-    if (typeof expression === 'string') return expression;
-
-    if (isArray(expression)) {
-        // TODO(jwwishart) handle error 
-        // TODO(jwwishart) get arguments and ensure its a function
-        let toExecute = findInScope(expression[0].name);
-        if (toExecute) {
-            let args = [];
-
-            // TODO we ought to validate that the first thing is a symbol?
-            // NOTE we don't parse the first symbol
-            for (let i = 1; i < expression.length; i++) {
-                // Have to let the function evaluate the symbol if it
-                // needs to... the function might need to create the 
-                // symbol in scope (var,set) or evaluate it (print)
-                if (expression[i].Type == AtomType.Symbol) {
-                    args.push(expression[i]);
-                    continue;
-                }
-
-                args.push(evaluateExpression(expression[i]));
-            }
-
-            return toExecute.apply(null, args);
-        }
-
-        return expression;
-    }
-    return expression;
-}
-
-function _evaluate(parsed: Atom[]) {
-    DEBUG && console.log(JSON.stringify(parsed));
-
-    function internalEvaluate(parsed: Atom) {
-        // Symbol ???
-        if (parsed.Type === AtomType.Symbol) {
-            let val = findInScope(parsed.Data);
-            if (val == null) {
-                // TODO this is wrong for evaluation.... 
-                // TODO parsing should consider this...
-                return parsed.Data; // Can't find the symbol so just return the symbol
-            }
-            return val;
-        }
-        
-        if (parsed.IsData) {
-             if (parsed.Type == AtomType.Integer) {
-                 return parseInt(parsed.Data, 10);
-             }
-             // TODO other types of data need to be cast propertly
-             return parsed.Data;
-        }
-        
-        if (parsed.Type == AtomType.Code) {
-            let args = [];
-            // parsed.Data.length - 1;
-
-            // TODO we ought to validate that the first thing is a symbol?
-
-            // NOTE we don't parse the first symbol
-            for (let i = 1; i < parsed.Data.length; i++) {
-                // Have to let the function evaluate the symbol if it
-                // needs to... the function might need to create the 
-                // symbol in scope (var,set) or evaluate it (print)
-                if (parsed.Data[i].Type == AtomType.Symbol) {
-                    args.push(parsed.Data[i]);
-                    continue;
-                }
-
-                args.push(internalEvaluate(parsed.Data[i]));
-            }
-//console.log("Symbol: " + JSON.stringify(parsed.Data[0]));
-            let method = GlobalScope[parsed.Data[0].Data]; // symbol! .. .?
-            return method.apply(GlobalScope, args); 
-            // Evaluate from right to left...
-        }
-    }
-
-    for (var i = 0; i < parsed.length; i++) {
-        // Raw Integer
-        let val = internalEvaluate(parsed[i]);
-        if (val === undefined) continue;
-
-        console.log(val);
-    }
-
-    //console.log("TODO write evaluate()");
-    return parsed;
-}
-
-// function print(results) {
-//     if (results === null) {
-//         console.log("null");
-//         return;
-//     }
-
-//     if (results === undefined) {
-//         console.log("undefined");
-//         return;
-//     }
-
-//     if (results.length) {
-//         console.log('[');
-//         for (var i = 0; i < results.length; i++) {
-//             print(results[i]);
-//             console.log(',');
-//         }
-//         console.log(']');
-//         return;
-//     }
-
-//     if (isObj(results)) {
-//         console.log('{');
-//         for (var p in results) {
-//             if (Object.prototype.hasOwnProperty.call(results, p)) {
-//                 console.log('"' + p + '": ');
-//                 print(results[p]);
-//                 console.log(',');
-//             }
-//         }
-//         console.log('}');   
-//         return;
-//     }
-// }

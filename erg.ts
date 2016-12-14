@@ -1,5 +1,6 @@
 /// <reference path="src/util.ts" />
 /// <reference path="src/read.ts" />
+/// <reference path="src/print.ts" />
 /// <reference path="src/eval.ts" />
 
 
@@ -38,29 +39,44 @@ let expression = `(println 5)`;
 DEBUG = true;
 
 
+//var expList = read(expression);
+//console.log(print(expList));
+
+//for (var i in expList) {
+//    print(expList[i]);
+//    console.log(expList[i]);
+//}
+
+
 // Parsing Tests
 //
 
 var expressions = [
-    // `1`,
-    // `"Hello World"`,
-    //`42`,
-    // `3.14159`,
-    // `+`,
-    // `()`,
-    // `'(a b c d)`,
-    // `(+ 1 2)`,
+    `1`,
+    `"Hello World"`,
+    `42`,
+    `3.14159`,
+    `+`,
+    `()`,
+    `'(a b c d)`,
+    `(+ 1 2)`,
     `(print "Hello World")`,
-    // `(print (+ 1 2))`,
-    // `(print '(+ 1 2))`,
-    // `(var duck "quack")`,
+    `(print (+ 1 2))`,
+    `'(print (+ 1 2))`,
+    `(print '(+ 1 2))`,
+    `(var duck "quack")`,
 ];
+
+write("=> " + print(eval(read(expressions[9]))));
+throw new Error("just stop would you");
 
 for (var i = 0; i < expressions.length; i++) {
     // Print the Parsed Expression (first one only... remember parse() returns
     // a list... we don't want to parse the list to the print() method...
-    console.log("p> " + print(read(expressions[i])[0]));
-    console.log("=> " + print(evaluate(read(expressions[i]))));
+    
+write("p> " + print(read(expressions[i])[0]));
+write("=> " + print(eval(read(expressions[i]))));
+    
     //console.log(parse(expressions[i]));
     //console.log(evaluate(parse(expressions[i])));
     //console.log(print(parse(expressions[i])));

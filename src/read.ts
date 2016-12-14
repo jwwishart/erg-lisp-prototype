@@ -34,7 +34,7 @@ interface IAtom {
 }
 
 enum AtomType {
-    None,
+    Unspecified,
 
     Symbol,
 
@@ -67,37 +67,32 @@ class Atom implements IAtom {
     }
 }
 
-class Symbol extends Atom {
+class AtomSymbol extends Atom {
     constructor(name: string, isQuoted: boolean = false) {
         super(AtomType.Symbol, name, isQuoted);
     }
-
-    Type: AtomType = AtomType.Symbol;
-    IsQuoted: boolean = false;
-    Data: string
 }
 
-class AtomString extends String implements IAtom {
+class AtomString extends Atom implements IAtom {
     constructor(data: string, isQuoted: boolean = false) {
-        super(data);
+        super(AtomType.String, data, isQuoted)
         this.Type = AtomType.String;
         this.IsQuoted = isQuoted;
     }
 
-    Type: AtomType = AtomType.String;
-    IsQuoted: boolean = false;
-    Data: string = null
+    Type: AtomType;
+    IsQuoted: boolean;
 }
 
-class AtomArray extends Array implements IAtom {
-    constructor(data: Array<any>, isQuoted: boolean = false) {
+class AtomList extends Array implements IAtom {
+    constructor(isQuoted: boolean = false) {
         super();
         this.Type = AtomType.List;
         this.IsQuoted = isQuoted;
     }
 
-    Type: AtomType = AtomType.List;
-    IsQuoted: boolean = false;
+    Type: AtomType;
+    IsQuoted: boolean;
 }
 
 class AtomMap extends Object {
@@ -105,30 +100,23 @@ class AtomMap extends Object {
         super();
         this.Type = AtomType.Map;
         this.IsQuoted = isQuoted;
+        // TODO(jwwishart) data? constructor? keys onto this object???
     }
 
-    Type: AtomType = AtomType.Map;
-    IsQuoted: boolean = false;
+    Type: AtomType;
+    IsQuoted: boolean;
 }
 
 class AtomNumber extends Atom {
     constructor(data: number, isQuoted: boolean = false) {
         super(AtomType.Number, data, isQuoted)
     }
-
-    Type: AtomType = AtomType.Number;
-    IsQuoted: boolean = false;
-    Data: number = 0;
 }
 
 class AtomBoolean extends Atom {
     constructor(data: boolean, isQuoted: boolean = false) {
         super(AtomType.Boolean, data, isQuoted)
     }
-
-    Type: AtomType = AtomType.Boolean;
-    IsQuoted: boolean = false;
-    Data: boolean = false;
 }
 
 
@@ -151,7 +139,7 @@ class TokenInfo {
  */
 function read(code: string) {
     let i = 0;
-    let results = []; // Array of expressions
+    let results = []; // Array of expressions.
     let next = () => { return code[i++]; };
     let c = null;
     let expression = null; // current list expression we are parsing goes in here till done?
@@ -160,7 +148,7 @@ function read(code: string) {
 
     let push = (it) => {
         // If we pushed a list then append to the list
-        if (isArray(it)) {
+        if (it instanceof AtomList) {
             if (listStack == null) {
                 listStack = [it];
             } else {
@@ -202,7 +190,7 @@ function read(code: string) {
         throw new Error("we ought not get here... where is this list expected...?");
     }
 
-    let parserNumber = () => {
+    let parserNumber = (isQuoted: boolean) => {
         i--; // Keeps while loop consistent...
 
         let wholeNumber = '';
@@ -222,9 +210,9 @@ function read(code: string) {
         i--; // Move back a char so next sections next() call will be on current char
 
         if (doneDecimal) {
-            return parseFloat(wholeNumber);
+            return new AtomNumber(parseFloat(wholeNumber), isQuoted);
         } else {
-            return parseInt(wholeNumber, 10);
+            return new AtomNumber(parseInt(wholeNumber, 10), isQuoted);
         }
     }
 
@@ -246,7 +234,9 @@ function read(code: string) {
         }
 
         // i--; skip the final quote
-        return wholeWord;
+        let result = new AtomString(wholeWord, hasDataIndicator);
+        hasDataIndicator = false;
+        return result;
     }
 
     let parseSymbol = () => {
@@ -263,7 +253,9 @@ function read(code: string) {
 
         i--;
         
-        return new Symbol(wholeWord);
+        let result = new AtomSymbol(wholeWord, hasDataIndicator);
+        hasDataIndicator = false;
+        return result;
     };
 
     while ((c = next()) !== undefined) {
@@ -285,8 +277,8 @@ function read(code: string) {
             case '9':
             {
                 // TODO(jwwishart) decimal, bignumber, ratio
-                push(parserNumber());
-
+                push(parserNumber(hasDataIndicator));
+                hasDataIndicator = false;
                 continue;
             }
         }
@@ -312,11 +304,8 @@ function read(code: string) {
         }
 
         if (c === '(') {
-            let toPush = [];
-            if (hasDataIndicator) {
-                toPush["isQuoted"] = true;
-                hasDataIndicator = false;
-            }
+            let toPush = new AtomList(hasDataIndicator);
+            hasDataIndicator = false;
 
             push(toPush);
             continue;
@@ -342,8 +331,8 @@ function read(code: string) {
                     // TODO need to find the symbol... what is it? a 
                     //  function? if so then it needs to have the subsequent
                     //  items parsed to it...
-                    push(new Symbol(c));
-
+                    push(new AtomSymbol(c, hasDataIndicator));
+                    hasDataIndicator = false;
                     continue;
                 }
         }

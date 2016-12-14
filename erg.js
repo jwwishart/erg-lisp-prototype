@@ -15,7 +15,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var AtomType;
 (function (AtomType) {
-    AtomType[AtomType["None"] = 0] = "None";
+    AtomType[AtomType["Unspecified"] = 0] = "Unspecified";
     AtomType[AtomType["Symbol"] = 1] = "Symbol";
     AtomType[AtomType["Number"] = 2] = "Number";
     AtomType[AtomType["Decimal"] = 3] = "Decimal";
@@ -39,48 +39,39 @@ var Atom = (function () {
     };
     return Atom;
 }());
-var Symbol = (function (_super) {
-    __extends(Symbol, _super);
-    function Symbol(name, isQuoted) {
+var AtomSymbol = (function (_super) {
+    __extends(AtomSymbol, _super);
+    function AtomSymbol(name, isQuoted) {
         if (isQuoted === void 0) { isQuoted = false; }
         _super.call(this, AtomType.Symbol, name, isQuoted);
-        this.Type = AtomType.Symbol;
-        this.IsQuoted = false;
     }
-    return Symbol;
+    return AtomSymbol;
 }(Atom));
 var AtomString = (function (_super) {
     __extends(AtomString, _super);
     function AtomString(data, isQuoted) {
         if (isQuoted === void 0) { isQuoted = false; }
-        _super.call(this, data);
-        this.Type = AtomType.String;
-        this.IsQuoted = false;
-        this.Data = null;
+        _super.call(this, AtomType.String, data, isQuoted);
         this.Type = AtomType.String;
         this.IsQuoted = isQuoted;
     }
     return AtomString;
-}(String));
-var AtomArray = (function (_super) {
-    __extends(AtomArray, _super);
-    function AtomArray(data, isQuoted) {
+}(Atom));
+var AtomList = (function (_super) {
+    __extends(AtomList, _super);
+    function AtomList(isQuoted) {
         if (isQuoted === void 0) { isQuoted = false; }
         _super.call(this);
         this.Type = AtomType.List;
-        this.IsQuoted = false;
-        this.Type = AtomType.List;
         this.IsQuoted = isQuoted;
     }
-    return AtomArray;
+    return AtomList;
 }(Array));
 var AtomMap = (function (_super) {
     __extends(AtomMap, _super);
     function AtomMap(data, isQuoted) {
         if (isQuoted === void 0) { isQuoted = false; }
         _super.call(this);
-        this.Type = AtomType.Map;
-        this.IsQuoted = false;
         this.Type = AtomType.Map;
         this.IsQuoted = isQuoted;
     }
@@ -91,9 +82,6 @@ var AtomNumber = (function (_super) {
     function AtomNumber(data, isQuoted) {
         if (isQuoted === void 0) { isQuoted = false; }
         _super.call(this, AtomType.Number, data, isQuoted);
-        this.Type = AtomType.Number;
-        this.IsQuoted = false;
-        this.Data = 0;
     }
     return AtomNumber;
 }(Atom));
@@ -102,9 +90,6 @@ var AtomBoolean = (function (_super) {
     function AtomBoolean(data, isQuoted) {
         if (isQuoted === void 0) { isQuoted = false; }
         _super.call(this, AtomType.Boolean, data, isQuoted);
-        this.Type = AtomType.Boolean;
-        this.IsQuoted = false;
-        this.Data = false;
     }
     return AtomBoolean;
 }(Atom));
@@ -122,7 +107,7 @@ function read(code) {
     var listStack = null;
     var hasDataIndicator = false;
     var push = function (it) {
-        if (isArray(it)) {
+        if (it instanceof AtomList) {
             if (listStack == null) {
                 listStack = [it];
             }
@@ -153,7 +138,7 @@ function read(code) {
         }
         throw new Error("we ought not get here... where is this list expected...?");
     };
-    var parserNumber = function () {
+    var parserNumber = function (isQuoted) {
         i--;
         var wholeNumber = '';
         var doneDecimal = false;
@@ -170,10 +155,10 @@ function read(code) {
         }
         i--;
         if (doneDecimal) {
-            return parseFloat(wholeNumber);
+            return new AtomNumber(parseFloat(wholeNumber), isQuoted);
         }
         else {
-            return parseInt(wholeNumber, 10);
+            return new AtomNumber(parseInt(wholeNumber, 10), isQuoted);
         }
     };
     var parseString = function () {
@@ -189,7 +174,9 @@ function read(code) {
             }
             wholeWord += c;
         }
-        return wholeWord;
+        var result = new AtomString(wholeWord, hasDataIndicator);
+        hasDataIndicator = false;
+        return result;
     };
     var parseSymbol = function () {
         i--;
@@ -201,7 +188,9 @@ function read(code) {
             wholeWord += c;
         }
         i--;
-        return new Symbol(wholeWord);
+        var result = new AtomSymbol(wholeWord, hasDataIndicator);
+        hasDataIndicator = false;
+        return result;
     };
     while ((c = next()) !== undefined) {
         if (c === ' ' || c === '\t' || c === '\n' || c === '\r')
@@ -218,7 +207,8 @@ function read(code) {
             case '8':
             case '9':
                 {
-                    push(parserNumber());
+                    push(parserNumber(hasDataIndicator));
+                    hasDataIndicator = false;
                     continue;
                 }
         }
@@ -231,11 +221,8 @@ function read(code) {
             continue;
         }
         if (c === '(') {
-            var toPush = [];
-            if (hasDataIndicator) {
-                toPush["isQuoted"] = true;
-                hasDataIndicator = false;
-            }
+            var toPush = new AtomList(hasDataIndicator);
+            hasDataIndicator = false;
             push(toPush);
             continue;
         }
@@ -249,7 +236,8 @@ function read(code) {
             case '/':
             case '*':
                 {
-                    push(new Symbol(c));
+                    push(new AtomSymbol(c, hasDataIndicator));
+                    hasDataIndicator = false;
                     continue;
                 }
         }
@@ -268,69 +256,57 @@ function read(code) {
     }
     return results;
 }
+function print(expressions) {
+    var result = "";
+    if (expressions.Type == null && expressions.length > 0) {
+        for (var i_1 = 0; i_1 < expressions.length; i_1++) {
+            result += print(expressions[i_1]);
+        }
+    }
+    var exp = expressions;
+    if (exp.Type === AtomType.Unspecified) {
+        return "** Unspecified **";
+    }
+    if ((exp.Type === AtomType.Boolean
+        || exp.Type === AtomType.Number
+        || exp.Type === AtomType.String
+        || exp.Type === AtomType.Symbol)) {
+        if (exp.IsQuoted)
+            result += "'";
+        if (exp.Type === AtomType.String) {
+            result += '"';
+        }
+        result += exp.Data.toString();
+        if (exp.Type === AtomType.String) {
+            result += '"';
+        }
+        return result;
+    }
+    if (exp.Type === AtomType.List) {
+        if (exp.IsQuoted)
+            result += "'";
+        result += '(';
+        for (var i = 0; i < exp.length; i++) {
+            if (i >= 1)
+                result += ' ';
+            result += print(exp[i]);
+        }
+        result += ')';
+    }
+    return result;
+}
 var SymbolType;
 (function (SymbolType) {
     SymbolType[SymbolType["Function"] = 0] = "Function";
     SymbolType[SymbolType["Data"] = 1] = "Data";
 })(SymbolType || (SymbolType = {}));
 var GlobalScope = {
-    '-': {
-        Type: SymbolType.Function,
-        Arguments: [{
-                Name: 'a',
-                Type: AtomType.Integer
-            }, {
-                Name: 'b',
-                Type: AtomType.Integer
-            },],
-        ReturnType: AtomType.Integer,
-        Data: function (a, b) { return a + b; }
+    '+': function (a, b) {
+        return new AtomNumber(a.Data + b.Data);
     },
-    'printf': {
-        Type: SymbolType.Function,
-        Arguments: [{
-                Name: 'a',
-                Type: AtomType.String
-            }],
-        ReturnType: AtomType.Integer,
-        Data: function (a) { console.log(a); }
-    },
-    '+': function (a, b) { return a + b; },
-    '/': function (a, b) { return a / b; },
-    '*': function (a, b) { return a * b; },
-    'print': function (text) {
-        if (Object.prototype.hasOwnProperty.call(text, 'Type') &&
-            Object.prototype.hasOwnProperty.call(text, 'Data') &&
-            text.Type === AtomType.Symbol) {
-            var val = findInScope(text.Data);
-            if (val != null) {
-                console.log(val);
-                return;
-            }
-        }
-        console.log(text);
-    },
-    'println': function (it) {
-        if (it instanceof String) {
-            console.log(it);
-            return;
-        }
-        if (it instanceof Number) {
-            console.log(it);
-            return;
-        }
-        console.error("NOOOO! What is this!: ");
-        console.error(it);
-    },
-    'var': function (name, value) {
-        if (Object.prototype.hasOwnProperty.call(name, 'Type') &&
-            Object.prototype.hasOwnProperty.call(name, 'Data') &&
-            name.Type === AtomType.Symbol) {
-            name = name.Data;
-        }
-        scope()[name] = value;
-    },
-    'set': function (name, value) { GlobalScope.var(name, value); }
+    'print': function (toPrint) {
+        console.log(toPrint.Data);
+    }
 };
 var _scopes = [
     GlobalScope
@@ -347,120 +323,75 @@ var findInScope = function (symbol) {
 var dumpScope = function () {
     console.log(_scopes);
 };
-function print(expressions) {
-    var result = "";
-    if (typeof expressions === 'function')
-        return expressions.toString();
-    if (typeof expressions === 'number')
-        return expressions.toString();
-    if (typeof expressions === 'string')
-        return '"' + expressions.toString() + '"';
-    if (expressions._type === "symbol")
-        return expressions.name;
-    result += '(';
-    for (var i = 0; i < expressions.length; i++) {
-        if (i >= 1)
-            result += ' ';
-        var expression_1 = expressions[i];
-        var item = findInScope(expression_1);
-        if (typeof expression_1 === 'string') {
-            result += '"' + expression_1.toString() + '"';
-        }
-        else if (expression_1._type === "symbol") {
-            result += expression_1.name;
-        }
-        else if (isArray(expression_1)) {
-            result += print(expression_1);
-        }
-        else if (isArray(expression_1) && expression_1.isQuoted === true) {
-            result += "'(" + print(expression_1) + ")";
-        }
-        else {
-            result += expression_1.toString();
+function write(it) {
+    console.log(it);
+}
+var UnspecifiedAtom = (function (_super) {
+    __extends(UnspecifiedAtom, _super);
+    function UnspecifiedAtom() {
+        _super.call(this, AtomType.Unspecified, null, false);
+    }
+    return UnspecifiedAtom;
+}(Atom));
+function eval(toEval) {
+    var last = new UnspecifiedAtom();
+    if (toEval.Type == null && toEval.length > 0) {
+        for (var i_2 = 0; i_2 < toEval.length; i_2++) {
+            last = eval(toEval[i_2]);
         }
     }
-    result += ')';
-    return result;
-}
-function evaluate(parsed) {
-    var last = undefined;
-    for (var i = 0; i < parsed.length; i++) {
-        last = evaluateExpression(parsed[i]);
+    if ((toEval.Type === AtomType.Boolean
+        || toEval.Type === AtomType.Number
+        || toEval.Type === AtomType.String
+        || toEval.Type === AtomType.Symbol)) {
+        return toEval;
+    }
+    if (toEval.Type === AtomType.List && toEval.IsQuoted) {
+        return toEval;
+    }
+    if (toEval.Type === AtomType.List) {
+        if (toEval.length === 0) {
+            return toEval;
+        }
+        var operator = toEval[0];
+        var args = [];
+        var func = findInScope(operator.Data);
+        if (func == null) {
+            console.error("Error: Unable to find procedure: '" + operator.Data + "'");
+        }
+        if (toEval.length > 1) {
+            args = toEval.slice(1);
+            for (var j = 0; j < args.length; j++) {
+                args[j] = eval(args[j]);
+            }
+        }
+        last = func.apply(scope(), args);
+        if (last == null)
+            last = new UnspecifiedAtom();
     }
     return last;
-}
-function evaluateExpression(expression) {
-    if (typeof expression === 'number')
-        return expression;
-    if (expression._type === "symbol") {
-        var foundSymbol = findInScope(expression.name);
-        if (typeof foundSymbol === 'function')
-            return foundSymbol;
-        return expression.name;
-    }
-    if (typeof expression === 'string')
-        return expression;
-    if (isArray(expression)) {
-        var toExecute = findInScope(expression[0].name);
-        if (toExecute) {
-            var args = [];
-            for (var i_1 = 1; i_1 < expression.length; i_1++) {
-                if (expression[i_1].Type == AtomType.Symbol) {
-                    args.push(expression[i_1]);
-                    continue;
-                }
-                args.push(evaluateExpression(expression[i_1]));
-            }
-            return toExecute.apply(null, args);
-        }
-        return expression;
-    }
-    return expression;
-}
-function _evaluate(parsed) {
-    DEBUG && console.log(JSON.stringify(parsed));
-    function internalEvaluate(parsed) {
-        if (parsed.Type === AtomType.Symbol) {
-            var val = findInScope(parsed.Data);
-            if (val == null) {
-                return parsed.Data;
-            }
-            return val;
-        }
-        if (parsed.IsData) {
-            if (parsed.Type == AtomType.Integer) {
-                return parseInt(parsed.Data, 10);
-            }
-            return parsed.Data;
-        }
-        if (parsed.Type == AtomType.Code) {
-            var args = [];
-            for (var i_2 = 1; i_2 < parsed.Data.length; i_2++) {
-                if (parsed.Data[i_2].Type == AtomType.Symbol) {
-                    args.push(parsed.Data[i_2]);
-                    continue;
-                }
-                args.push(internalEvaluate(parsed.Data[i_2]));
-            }
-            var method = GlobalScope[parsed.Data[0].Data];
-            return method.apply(GlobalScope, args);
-        }
-    }
-    for (var i = 0; i < parsed.length; i++) {
-        var val = internalEvaluate(parsed[i]);
-        if (val === undefined)
-            continue;
-        console.log(val);
-    }
-    return parsed;
 }
 var expression = "(println 5)";
 DEBUG = true;
 var expressions = [
+    "1",
+    "\"Hello World\"",
+    "42",
+    "3.14159",
+    "+",
+    "()",
+    "'(a b c d)",
+    "(+ 1 2)",
     "(print \"Hello World\")",
+    "(print (+ 1 2))",
+    "'(print (+ 1 2))",
+    "(print '(+ 1 2))",
+    "(var duck \"quack\")",
 ];
+write("=> " + print(eval(read(expressions[9]))));
+throw new Error("just stop would you");
 for (var i = 0; i < expressions.length; i++) {
-    console.log("p> " + print(read(expressions[i])[0]));
-    console.log("=> " + print(evaluate(read(expressions[i]))));
+    write("p> " + print(read(expressions[i])[0]));
+    write("=> " + print(eval(read(expressions[i]))));
 }
 //# sourceMappingURL=erg.js.map
