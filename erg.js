@@ -271,8 +271,6 @@ function print(expressions) {
         || exp.Type === AtomType.Number
         || exp.Type === AtomType.String
         || exp.Type === AtomType.Symbol)) {
-        if (exp.IsQuoted)
-            result += "'";
         if (exp.Type === AtomType.String) {
             result += '"';
         }
@@ -283,8 +281,6 @@ function print(expressions) {
         return result;
     }
     if (exp.Type === AtomType.List) {
-        if (exp.IsQuoted)
-            result += "'";
         result += '(';
         for (var i = 0; i < exp.length; i++) {
             if (i >= 1)
@@ -305,6 +301,10 @@ var GlobalScope = {
         return new AtomNumber(a.Data + b.Data);
     },
     'print': function (toPrint) {
+        if (toPrint.length) {
+            console.error("ERROR: print() passed an array... can only print strings or primitives");
+            return null;
+        }
         console.log(toPrint.Data);
     }
 };
@@ -357,7 +357,8 @@ function eval(toEval) {
         var args = [];
         var func = findInScope(operator.Data);
         if (func == null) {
-            console.error("Error: Unable to find procedure: '" + operator.Data + "'");
+            last = handleSpecialForms(toEval);
+            console.error("ERROR: Unable to find procedure: '" + operator.Data + "'");
         }
         if (toEval.length > 1) {
             args = toEval.slice(1);
@@ -371,25 +372,13 @@ function eval(toEval) {
     }
     return last;
 }
+function handleSpecialForms(toEval) {
+}
 var expression = "(println 5)";
 DEBUG = true;
 var expressions = [
-    "1",
-    "\"Hello World\"",
-    "42",
-    "3.14159",
-    "+",
-    "()",
-    "'(a b c d)",
-    "(+ 1 2)",
-    "(print \"Hello World\")",
-    "(print (+ 1 2))",
-    "'(print (+ 1 2))",
     "(print '(+ 1 2))",
-    "(var duck \"quack\")",
 ];
-write("=> " + print(eval(read(expressions[9]))));
-throw new Error("just stop would you");
 for (var i = 0; i < expressions.length; i++) {
     write("p> " + print(read(expressions[i])[0]));
     write("=> " + print(eval(read(expressions[i]))));

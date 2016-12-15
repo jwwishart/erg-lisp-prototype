@@ -55,6 +55,11 @@ let GlobalScope = {
         return new AtomNumber(a.Data + b.Data);
     },
     'print': (toPrint) => {
+        if (toPrint.length) {
+            console.error("ERROR: print() passed an array... can only print strings or primitives");
+            return null;
+        }
+
         // TODO(jwwishart) again Atom passed in... 
         // TODO(jwwishart) could be all sorts of things passed in... just strings???
         console.log(toPrint.Data)
@@ -136,7 +141,10 @@ function eval(toEval: any) {
 
         let func = findInScope(operator.Data);
         if (func == null) {
-            console.error("Error: Unable to find procedure: '" + operator.Data + "'");
+            // Special Forms
+            last = handleSpecialForms(toEval);
+
+            console.error("ERROR: Unable to find procedure: '" + operator.Data + "'");
         }
 
         if (toEval.length > 1) {
@@ -160,6 +168,13 @@ function eval(toEval: any) {
     }
 
     return last;
+}
+
+function handleSpecialForms(toEval) {
+    // define/let
+    // or/and
+    // if else
+    
 }
 
 

@@ -52,23 +52,23 @@ DEBUG = true;
 //
 
 var expressions = [
-    `1`,
-    `"Hello World"`,
-    `42`,
-    `3.14159`,
-    `+`,
-    `()`,
-    `'(a b c d)`,
-    `(+ 1 2)`,
-    `(print "Hello World")`,
-    `(print (+ 1 2))`,
-    `'(print (+ 1 2))`,
+    // `1`,
+    // `"Hello World"`,
+    // `42`,
+    // `3.14159`,
+    // `+`,
+    // `()`,
+    // `'(a b c d)`,
+    // `(+ 1 2)`,
+    // `(print "Hello World")`,
+    // `(print (+ 1 2))`,
+    // `'(print (+ 1 2))`,
     `(print '(+ 1 2))`,
-    `(var duck "quack")`,
+    //`(var duck "quack")`,
 ];
 
-write("=> " + print(eval(read(expressions[9]))));
-throw new Error("just stop would you");
+//write("=> " + print(eval(read(expressions[9]))));
+//throw new Error("just stop would you");
 
 for (var i = 0; i < expressions.length; i++) {
     // Print the Parsed Expression (first one only... remember parse() returns

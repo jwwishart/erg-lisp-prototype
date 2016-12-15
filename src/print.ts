@@ -29,7 +29,7 @@ function print(expressions) {
          || exp.Type === AtomType.String
          || exp.Type === AtomType.Symbol)) 
     {
-        if (exp.IsQuoted) result += "'";
+        //if (exp.IsQuoted) result += "'";
 
         if (exp.Type === AtomType.String) {
             result += '"'
@@ -51,7 +51,7 @@ function print(expressions) {
     //
 
     if (exp.Type === AtomType.List) {
-        if (exp.IsQuoted) result += "'";
+        //if (exp.IsQuoted) result += "'";
 
         result += '(';
 
