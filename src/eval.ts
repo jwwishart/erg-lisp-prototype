@@ -43,6 +43,8 @@ enum SymbolType {
     Data
 }
 
+var write = print;
+
 let GlobalScope = {
     '+': (a, b) => {
         // TODO(jwwishart) is this right... take the atom and convert it to other atoms?
@@ -54,16 +56,8 @@ let GlobalScope = {
         // TODO(jwwishart) assert a and b are numbers or strings or ??? 
         return new AtomNumber(a.Data + b.Data);
     },
-    'print': (toPrint) => {
-        if (toPrint.length) {
-            console.error("ERROR: print() passed an array... can only print strings or primitives");
-            return null;
-        }
-
-        // TODO(jwwishart) again Atom passed in... 
-        // TODO(jwwishart) could be all sorts of things passed in... just strings???
-        console.log(toPrint.Data)
-    }
+    'print': print,
+    'write': print
 };
 
 let _scopes = [
@@ -84,10 +78,6 @@ let dumpScope = () => {
     console.log(_scopes);
 }
 
-function write(it: any) {
-    // TODO(jwwishart) this writes to standard output...
-    console.log(it);
-}
 
 class UnspecifiedAtom extends Atom {
     constructor() {
@@ -171,9 +161,46 @@ function eval(toEval: any) {
 }
 
 function handleSpecialForms(toEval) {
-    // define/let
-    // or/and
-    // if else
+    // Validation of arguments
+    //
+
+    if (toEval[0].Data === 'if') {
+        // Expects at least a condition and 1 thing to do if true or additional 
+        // for alternate
+
+        // First Evaluate the first argument which ought to evalute to true 
+        // (null or () or false is false...
+        // TODO(jwwishart) handle all false conditions...
+        if (toEval.length == 2) {
+            // TODO(jwwishart) this is like really wrong!!!! :o)
+            if (eval(toEval(1))) {
+                if (toEval.length === 3) {
+                    console.log("TRUE EXPRESSION EXECUTED");
+                } else {
+                    console.log("THROW: must have something here yes???");
+                }
+            } else {
+                if (toEval.length === 3) {
+                    console.log("ALTERNATE EXECUTED");
+                } else {
+                    console.log("THROW: no alternate... no problems?");
+                }
+
+            }
+        }
+
+        return new UnspecifiedAtom();
+    }
+
+    if (toEval[0].Data === 'or') {
+        console.error('or procedure');
+        return new UnspecifiedAtom();
+    }
+
+    if (toEval[0].Data === 'and') {
+        console.error('and procedure');
+        return new UnspecifiedAtom();
+    }
     
 }
 

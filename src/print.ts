@@ -3,6 +3,13 @@
 // TODO(jwwishart) move commands into own folder... i.e builtin-procedures/print.ts for example
 // TODO(jwwishart) I'm not sure the general idea of 
 function print(expressions) {
+    // TODO(jwwishart) bools, functions (raw functions) other primitives? 
+    if (typeof expressions === 'string' 
+     || typeof expressions === 'number') {
+        console.log(expressions);
+        return "** Unspecified **";
+    }
+
     var result = "";
 
     // Array of Expressions: print each one

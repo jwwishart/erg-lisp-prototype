@@ -63,8 +63,11 @@ var expressions = [
     // `(print "Hello World")`,
     // `(print (+ 1 2))`,
     // `'(print (+ 1 2))`,
-    `(print '(+ 1 2))`,
+    //`(print '(+ 1 2))`,
+    //`(write '(+ 1 2))`,
     //`(var duck "quack")`,
+    `(if (+ 1 2) (print "Hello"))`,
+    `(or a b)`,
 ];
 
 //write("=> " + print(eval(read(expressions[9]))));

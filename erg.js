@@ -257,6 +257,11 @@ function read(code) {
     return results;
 }
 function print(expressions) {
+    if (typeof expressions === 'string'
+        || typeof expressions === 'number') {
+        console.log(expressions);
+        return "** Unspecified **";
+    }
     var result = "";
     if (expressions.Type == null && expressions.length > 0) {
         for (var i_1 = 0; i_1 < expressions.length; i_1++) {
@@ -296,17 +301,13 @@ var SymbolType;
     SymbolType[SymbolType["Function"] = 0] = "Function";
     SymbolType[SymbolType["Data"] = 1] = "Data";
 })(SymbolType || (SymbolType = {}));
+var write = print;
 var GlobalScope = {
     '+': function (a, b) {
         return new AtomNumber(a.Data + b.Data);
     },
-    'print': function (toPrint) {
-        if (toPrint.length) {
-            console.error("ERROR: print() passed an array... can only print strings or primitives");
-            return null;
-        }
-        console.log(toPrint.Data);
-    }
+    'print': print,
+    'write': print
 };
 var _scopes = [
     GlobalScope
@@ -323,9 +324,6 @@ var findInScope = function (symbol) {
 var dumpScope = function () {
     console.log(_scopes);
 };
-function write(it) {
-    console.log(it);
-}
 var UnspecifiedAtom = (function (_super) {
     __extends(UnspecifiedAtom, _super);
     function UnspecifiedAtom() {
@@ -373,11 +371,41 @@ function eval(toEval) {
     return last;
 }
 function handleSpecialForms(toEval) {
+    if (toEval[0].Data === 'if') {
+        if (toEval.length == 2) {
+            if (eval(toEval(1))) {
+                if (toEval.length === 3) {
+                    console.log("TRUE EXPRESSION EXECUTED");
+                }
+                else {
+                    console.log("THROW: must have something here yes???");
+                }
+            }
+            else {
+                if (toEval.length === 3) {
+                    console.log("ALTERNATE EXECUTED");
+                }
+                else {
+                    console.log("THROW: no alternate... no problems?");
+                }
+            }
+        }
+        return new UnspecifiedAtom();
+    }
+    if (toEval[0].Data === 'or') {
+        console.error('or procedure');
+        return new UnspecifiedAtom();
+    }
+    if (toEval[0].Data === 'and') {
+        console.error('and procedure');
+        return new UnspecifiedAtom();
+    }
 }
 var expression = "(println 5)";
 DEBUG = true;
 var expressions = [
-    "(print '(+ 1 2))",
+    "(if (+ 1 2) (print \"Hello\"))",
+    "(or a b)",
 ];
 for (var i = 0; i < expressions.length; i++) {
     write("p> " + print(read(expressions[i])[0]));
